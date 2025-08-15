@@ -1,0 +1,35 @@
+#!/bin/bash
+set -e
+
+# Create temp directory for test repo
+TMP_REPO=$(mktemp -d)
+cd "$TMP_REPO"
+
+# Initialize git repo
+git init
+
+# Create terraform directory and a badly formatted .tf file
+mkdir terraform
+cat <<EOF > terraform/main.tf
+resource "aws_instance" "example"
+{
+    ami           = "ami-123456"
+    instance_type = "t2.micro"  
+}
+EOF
+
+# Add and commit the file
+git add .
+git commit -m "Add badly formatted terraform file"
+
+# Copy pre-push hook into .git/hooks/
+cp ../scripts/hooks/pre-push .git/hooks/pre-push
+chmod +x .git/hooks/pre-push
+
+# Try to push (simulate by calling the hook directly)
+if .git/hooks/pre-push; then
+  echo "Test failed: push should have been blocked due to bad formatting"
+  exit 1
+else
+  echo "Test passed: push blocked as expected"
+fi
