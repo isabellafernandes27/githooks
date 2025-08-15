@@ -1,31 +1,42 @@
 #!/bin/sh
-# When addressing commit messages follow these rules:
-# Title: Summary, imperative, start upper case, don't end with a period
-# No more than 50 chars. #### 50 chars is here:  #
-# Remember blank line between title and body.
-# Body: Explain *what* and *why* (not *how*). Include task ID (Jira issue).
-# Wrap at 72 chars. ################################## which is here:  #
-# Special instructions, testing steps, rake, etc
-# At the end: Include Co-authored-by for all contributors.
-# Include at least one empty line before it. Format:
-# Co-authored-by: name <user@users.noreply.github.com>
 
+# Ticket DDDS-18: Terraform fmt
 
-# Skip hooks Use either -n or --no-verify
-
-
-# ticket DDDS-18: Terraform fmt
-# Change to the terraform directory
-cd terraform || {
+# Check if /terraform directory exists
+if [ ! -d "terraform" ]; then
   echo "Directory 'terraform' not found. Aborting push."
   exit 1
-}
-
-# Run terraform fmt in check mode recursively inside /terraform
-if ! terraform fmt -check -recursive; then
-  echo "Terraform files in /terraform are not properly formatted. Please run 'terraform fmt' in the /terraform directory."
-  exit 1  # Abort the push
 fi
 
-# Formatting is good, allow push
+# Read refs from stdin
+while read local_ref local_sha remote_ref remote_sha
+do
+  # Determine diff range
+  if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+    # New branch or new ref, diff against empty tree
+    diff_range="$local_sha"
+  else
+    diff_range="$remote_sha..$local_sha"
+  fi
+
+  # Get list of changed .tf files under terraform/
+  changed_files=$(git diff --name-only "$diff_range" -- 'terraform/*.tf')
+
+  if [ -z "$changed_files" ]; then
+    # No terraform files changed, continue to next ref or allow push
+    continue
+  fi
+
+  # Check formatting on each changed file
+  for file in $changed_files; do
+    if ! terraform fmt -check "$file"; then
+      echo "Terraform file '$file' is not properly formatted. Please run 'terraform fmt $file'."
+      exit 1
+    fi
+  done
+done
+
+# Ticket DDDS-19: Terraform validate
+
+# All checks passed or no terraform files changed
 exit 0
