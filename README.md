@@ -12,16 +12,16 @@ Skip hooks by using either `-n` or `--no-verify`.
 
 This hook attempts to address the following needs:
 
-- ensure `terraform fmt` can be run without errors if files inside /terraform/ were modified ([DDDS-18])(https://dat.jeppesen.com/jira/browse/DDDS-18)
-- ensure `terraform validate` can be run without errors if files inside /terraform/ were modified ([DDDS-19])(https://dat.jeppesen.com/jira/browse/DDDS-19)
-- ensure push is denied if message if branch name does not meet validation criteria ([DDDS-20])(https://dat.jeppesen.com/jira/browse/DDDS-20)
+- ensure `terraform fmt` can be run without errors if files inside /terraform/ were modified [DDDS-18](https://dat.jeppesen.com/jira/browse/DDDS-18)
+- ensure `terraform validate` can be run without errors if files inside /terraform/ were modified [DDDS-19](https://dat.jeppesen.com/jira/browse/DDDS-19)
+- ensure push is denied if message if branch name does not meet validation criteria [DDDS-20](https://dat.jeppesen.com/jira/browse/DDDS-20)
 
 Specific validation criteria can be found in the links above.
 
 ## Pre-commit-message Hook
 
 This hook attempts to address the following need:
-- Pre-pen ticket number/branch name into message ([DDDS-17])(https://dat.jeppesen.com/jira/browse/DDDS-17)
+- Pre-pen ticket number/branch name into message [DDDS-17](https://dat.jeppesen.com/jira/browse/DDDS-17)
 
 Specific validation criteria can be found in the link above.
 
