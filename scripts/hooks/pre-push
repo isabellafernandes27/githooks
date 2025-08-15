@@ -1,0 +1,17 @@
+#!/bin/sh
+
+# ticket DDDS-18: Terraform fmt
+# Change to the terraform directory
+cd terraform || {
+  echo "Directory 'terraform' not found. Aborting push."
+  exit 1
+}
+
+# Run terraform fmt in check mode recursively inside /terraform
+if ! terraform fmt -check -recursive; then
+  echo "Terraform files in /terraform are not properly formatted. Please run 'terraform fmt' in the /terraform directory."
+  exit 1  # Abort the push
+fi
+
+# Formatting is good, allow push
+exit 0
