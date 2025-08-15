@@ -1,12 +1,15 @@
 #!/bin/sh
 
 # Ticket DDDS-18: Terraform fmt
+# Ticket DDDS-19: Terraform validate
 
 # Check if /terraform directory exists
 if [ ! -d "terraform" ]; then
   echo "Directory 'terraform' not found. Aborting push."
   exit 1
 fi
+
+terraform_files_changed=0  # Initialize flag
 
 # Read refs from stdin
 while read local_ref local_sha remote_ref remote_sha
@@ -27,6 +30,8 @@ do
     continue
   fi
 
+  terraform_files_changed=1  # Mark that terraform files changed
+
   # Check formatting on each changed file
   for file in $changed_files; do
     if ! terraform fmt -check "$file"; then
@@ -37,6 +42,21 @@ do
 done
 
 # Ticket DDDS-19: Terraform validate
+
+# If terraform files changed, run terraform validate
+if [ "$terraform_files_changed" -eq 1 ]; then
+  cd terraform || {
+    echo "Failed to enter terraform directory."
+    exit 1
+  }
+  # Initialize terraform (no backend)
+  terraform init -backend=false -input=false >/dev/null 2>&1
+
+  if ! terraform validate; then
+    echo "Terraform validation failed. Please fix errors before pushing."
+    exit 1
+  fi
+fi
 
 # All checks passed or no terraform files changed
 exit 0

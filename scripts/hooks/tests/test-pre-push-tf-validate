@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-# Location of the pre-push hook to test
 HOOK_PATH="$(pwd)/scripts/hooks/pre-push"
 
 echo "Starting pre-push hook tests..."
@@ -15,9 +14,9 @@ git init -q
 
 # Setup terraform directory and example files
 mkdir terraform
-echo 'resource "null_resource" "example" {}' > terraform/formatted.tf
 
 # Add a well-formatted terraform file and commit
+echo 'resource "null_resource" "example" {}' > terraform/formatted.tf
 git add terraform/formatted.tf
 git commit -m "Add well-formatted terraform file" -q
 
@@ -26,10 +25,7 @@ mkdir -p .git/hooks
 cp "$HOOK_PATH" .git/hooks/pre-push
 chmod +x .git/hooks/pre-push
 
-# Helper function to simulate push by invoking pre-push hook
 simulate_push() {
-  # pre-push hook reads refs from stdin: <local_ref> <local_sha> <remote_ref> <remote_sha>
-  # We'll simulate pushing current branch to origin/main (remote sha is empty for new branch)
   local_ref=$(git rev-parse --abbrev-ref HEAD)
   local_sha=$(git rev-parse HEAD)
   remote_ref="refs/heads/main"
@@ -38,20 +34,20 @@ simulate_push() {
   echo "$local_ref $local_sha $remote_ref $remote_sha" | .git/hooks/pre-push
 }
 
-# 1) Test: Modified /terraform/ files with formatting issues that terraform fmt can fix automatically
+# Test 1: Modified /terraform/ files with fixable formatting issues
 echo -e 'resource "null_resource" "example" \n{\n}' > terraform/badformat.tf
 git add terraform/badformat.tf
 git commit -m "Add badly formatted terraform file" -q
 
 echo "Test 1: Modified /terraform/ files with fixable formatting issues"
 if simulate_push; then
-  echo "PASS: Push succeeded after hook fixed formatting and amended commit"
+  echo "PASS: Push succeeded after hook fixed formatting and validated"
 else
   echo "FAIL: Push blocked unexpectedly"
   exit 1
 fi
 
-# Verify that the file was reformatted and committed (no uncommitted changes)
+# Verify no uncommitted changes remain
 if git diff --quiet; then
   echo "PASS: Formatting changes were applied and committed"
 else
@@ -59,38 +55,37 @@ else
   exit 1
 fi
 
-# 2) Test: Modified files outside /terraform/
+# Test 2: Modified files outside /terraform/
 echo 'console.log("hello");' > outside.js
 git add outside.js
 git commit -m "Add file outside terraform" -q
 
 echo "Test 2: Modified files outside /terraform/"
 if simulate_push; then
-  echo "PASS: Push succeeded without running terraform fmt"
+  echo "PASS: Push succeeded without running terraform fmt or validate"
 else
   echo "FAIL: Push blocked unexpectedly"
   exit 1
 fi
 
-# 3) Test: Modified /terraform/ files with formatting issues that terraform fmt cannot fix automatically
-# To simulate this, create a file with invalid syntax that terraform fmt won't fix
-cat <<EOF > terraform/unfixable.tf
+# Test 3: Modified /terraform/ files with invalid Terraform config (fails validate)
+cat <<EOF > terraform/invalid.tf
 resource "aws_instance" "example" {
-  tags = {
-    Name = $var.name-web_app  // Invalid character '$' and incorrect interpolation
-  }
+  ami = "ami-123456"
+  instance_type = "t2.micro"
+  invalid_attribute = "should_fail"
 }
 EOF
 
-git add terraform/unfixable.tf
-git commit -m "Add unfixable terraform file" -q
+git add terraform/invalid.tf
+git commit -m "Add invalid terraform file" -q
 
-echo "Test 3: Modified /terraform/ files with unfixable formatting issues"
+echo "Test 3: Modified /terraform/ files with invalid Terraform config"
 if simulate_push; then
   echo "FAIL: Push succeeded but should have been blocked"
   exit 1
 else
-  echo "PASS: Push blocked as expected due to unfixable formatting issues"
+  echo "PASS: Push blocked as expected due to terraform validate failure"
 fi
 
 echo "All tests completed."
