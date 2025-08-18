@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-# Location of the pre-push hook to test
-HOOK_PATH="$(pwd)/scripts/hooks/pre-push"
+# Location of the pre-push-tf hook to test
+HOOK_PATH="$(pwd)/scripts/hooks/pre-push-tf"
 
-echo "Starting pre-push hook tests..."
+echo "Starting pre-push-tf hook tests..."
 
 TMP_REPO=$(mktemp -d)
 echo "Created temp repo at $TMP_REPO"
@@ -21,21 +21,21 @@ echo 'resource "null_resource" "example" {}' > terraform/formatted.tf
 git add terraform/formatted.tf
 git commit -m "Add well-formatted terraform file" -q
 
-# Copy the pre-push hook and make executable
+# Copy the pre-push-tf hook and make executable
 mkdir -p .git/hooks
-cp "$HOOK_PATH" .git/hooks/pre-push
-chmod +x .git/hooks/pre-push
+cp "$HOOK_PATH" .git/hooks/pre-push-tf
+chmod +x .git/hooks/pre-push-tf
 
-# Helper function to simulate push by invoking pre-push hook
+# Helper function to simulate push by invoking pre-push-tf hook
 simulate_push() {
-  # pre-push hook reads refs from stdin: <local_ref> <local_sha> <remote_ref> <remote_sha>
+  # pre-push-tf hook reads refs from stdin: <local_ref> <local_sha> <remote_ref> <remote_sha>
   # We'll simulate pushing current branch to origin/main (remote sha is empty for new branch)
   local_ref=$(git rev-parse --abbrev-ref HEAD)
   local_sha=$(git rev-parse HEAD)
   remote_ref="refs/heads/main"
   remote_sha="0000000000000000000000000000000000000000"
 
-  echo "$local_ref $local_sha $remote_ref $remote_sha" | .git/hooks/pre-push
+  echo "$local_ref $local_sha $remote_ref $remote_sha" | .git/hooks/pre-push-tf
 }
 
 # 1) Test: Modified /terraform/ files with formatting issues that terraform fmt can fix automatically

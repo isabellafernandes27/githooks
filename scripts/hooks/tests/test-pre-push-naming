@@ -1,43 +1,89 @@
 #!/bin/bash
+set -e
 
-# Test runner
-test_hook() {
-    local branch_name="$1"
-    local expected_result="$2"
 
-    git checkout -b "$branch_name" >/dev/null 2>&1
-    echo "test" > test.txt
-    git add test.txt
-    git commit -m "test commit" >/dev/null
+# Colors for messages
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+ORANGE=$'\033[0;33m'
+NOCOLOR=$'\033[0m'
 
-    # Simulate push
-    echo "Simulating push from $branch_name -> main"
-    echo "refs/heads/$branch_name HEAD refs/heads/main HEAD" | .git/hooks/pre-push-naming
+# Location of the pre-push hook to test
+HOOK_PATH="$(pwd)/scripts/hooks/pre-push-naming"
 
-    result=$?
-    if [[ $result -eq $expected_result ]]; then
-        echo "Test passed for branch '$branch_name' (expected: $expected_result, got: $result)"
-    else
-        echo "Test failed for branch '$branch_name' (expected: $expected_result, got: $result)"
-    fi
+echo "Starting pre-push-naming hook tests..."
 
-    git checkout main >/dev/null 2>&1 # Cleanup
-    git branch -D "$branch_name" >/dev/null 2>&1
-    if [[ -f test.txt ]]; then
-        rm test.txt
-    fi
-    git reset HEAD~1 --quiet
+TMP_REPO=$(mktemp -d)
+echo "Created temp repo at $TMP_REPO"
+cd "$TMP_REPO"
+
+git init -q
+
+# Create baseline main branch
+git checkout -b main -q
+echo "init" > README.md
+git add README.md
+git commit -m "Initial commit" -q
+
+# Set up the hook
+mkdir -p .git/hooks
+cp "$HOOK_PATH" .git/hooks/pre-push
+chmod +x .git/hooks/pre-push
+
+# Simulate push by invoking the hook manually
+simulate_push() {
+  local branch="$1"
+  git checkout -b "$branch" -q || git checkout "$branch" -q
+
+  echo "test" > test.txt
+  git add test.txt
+  git commit -m "test commit" -q
+
+  local_ref=$(git rev-parse --abbrev-ref HEAD)
+  local_sha=$(git rev-parse HEAD)
+  remote_ref="refs/heads/main"
+  remote_sha="0000000000000000000000000000000000000000"
+
+  echo "$local_ref $local_sha $remote_ref $remote_sha" | .git/hooks/pre-push
 }
 
-# Setup
-git checkout -b main >/dev/null 2>&1 || git checkout main
+# Run a single test
+run_test() {
+  local branch="$1"
+  local expect="$2"
+  echo "Testing branch: $branch (expecting exit code $expect)"
+
+  if simulate_push "$branch"; then
+    if [[ "$expect" -eq 0 ]]; then
+      echo "${GREEN}PASS: Allowed as expected${NOCOLOR}"
+    else
+      echo "${RED}FAIL: Should have been rejected${NOCOLOR}"
+      exit 1
+    fi
+  else
+    if [[ "$expect" -ne 0 ]]; then
+      echo "${GREEN}PASS: Rejected as expected${NOCOLOR}"
+    else
+      echo "${RED}FAIL: Should have been allowed${NOCOLOR}"
+      exit 1
+    fi
+  fi
+
+  git checkout main -q
+  git branch -D "$branch" -q
+  rm -f test.txt
+  echo
+}
 
 # Tests
-test_hook "DDDS-123: add-login" 0     # should pass
-test_hook "feature/add-login" 1       # should fail
-test_hook "DDDS-abc: invalid" 1       # should fail
-test_hook "DDDS-999: fix-bug" 0       # should pass
-test_hook "DDDS-9143299: fix-bug" 0   # should pass
-test_hook "DDDS-456:" 1                       # No summary
-test_hook "DDDS-456:    " 1                   # Blank summary
-test_hook "DDDS-789: fix something" 0         # Spaces allowed
+#run_test "main"                         1
+run_test "production"                  1
+run_test "feature/IDDS-1234"           0
+run_test "hotfix/IDDS-4567-suffix"     0
+run_test "dev/idds-0001"               1   # lowercase prefix
+run_test "feature/IDDS-abc"            1   # non-numeric
+run_test "IDDS-7890"                   0   # top-level branch, valid
+run_test "IDDS-5678-extra"             0
+run_test "idds-5678"                   1   # lowercase top-level
+
+echo "${GREEN}All naming tests completed successfully.${NOCOLOR}"

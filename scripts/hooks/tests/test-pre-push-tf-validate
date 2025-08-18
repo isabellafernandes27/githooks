@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-HOOK_PATH="$(pwd)/scripts/hooks/pre-push"
+HOOK_PATH="$(pwd)/scripts/hooks/pre-push-tf"
 
-echo "Starting pre-push hook tests..."
+echo "Starting pre-push-tf hook tests..."
 
 TMP_REPO=$(mktemp -d)
 echo "Created temp repo at $TMP_REPO"
@@ -20,10 +20,10 @@ echo 'resource "null_resource" "example" {}' > terraform/formatted.tf
 git add terraform/formatted.tf
 git commit -m "Add well-formatted terraform file" -q
 
-# Copy the pre-push hook and make executable
+# Copy the pre-push-tf hook and make executable
 mkdir -p .git/hooks
-cp "$HOOK_PATH" .git/hooks/pre-push
-chmod +x .git/hooks/pre-push
+cp "$HOOK_PATH" .git/hooks/pre-push-tf
+chmod +x .git/hooks/pre-push-tf
 
 simulate_push() {
   local_ref=$(git rev-parse --abbrev-ref HEAD)
@@ -31,7 +31,7 @@ simulate_push() {
   remote_ref="refs/heads/main"
   remote_sha="0000000000000000000000000000000000000000"
 
-  echo "$local_ref $local_sha $remote_ref $remote_sha" | .git/hooks/pre-push
+  echo "$local_ref $local_sha $remote_ref $remote_sha" | .git/hooks/pre-push-tf
 }
 
 # Test 1: Modified /terraform/ files with fixable formatting issues

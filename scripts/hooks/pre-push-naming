@@ -1,27 +1,51 @@
 #!/bin/bash
 
-# Get the current branch name (local)
-branch_name=$(git rev-parse --abbrev-ref HEAD)
+# Colors for messages
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+ORANGE='\033[0;33m'
+NOCOLOR='\033[0m'
 
-# Define naming pattern: DDDS-<number>: <summary>
-pattern='^DDDS-[0-9]+: .+'
+# Branches where pushes are disallowed
+if [ -z "$BRANCHES_TO_SKIP" ]; then
+  BRANCHES_TO_SKIP=(master production staging)
+fi
 
-# Read remote ref info from stdin
-while read local_ref local_sha remote_ref remote_sha; do
-    # Only enforce when pushing to main
-    if [[ "$remote_ref" == "refs/heads/main" ]]; then
-        if [[ "$branch_name" =~ $pattern ]]; then
-            exit 0
-        else
-            echo "❌ Push rejected!"
-            echo "Your branch name: '$branch_name'"
-            echo "Branch name must match pattern: 'DDDS-<number>: <summary>'"
-            echo "Example: 'DDDS-123: add-login-handler'"
-            echo "To rename:"
-            echo "  git branch -m 'DDDS-123: add-summary'"
-            exit 1
-        fi
-    fi
+# Regex to validate branch names
+VALID_BRANCH_REGEX="(^(feature|hotfix|bugfix|library|prerelease|release|dev|improvement)\/[A-Z]+\-[0-9]+(-.*)?$)|^([A-Z]+\-[0-9]+(-.*)?$)|^(main)$"
+
+# Get current branch name
+BRANCH_NAME="$(git rev-parse --abbrev-ref HEAD)"
+
+# Check if pushing to a protected branch (skip validation)
+for branch in "${BRANCHES_TO_SKIP[@]}"; do
+  if [[ "$BRANCH_NAME" == "$branch" ]]; then
+    echo -e "${RED}Pushes directly to branch '${branch}' are not allowed.${NOCOLOR}"
+    exit 1
+  fi
 done
 
-exit 0
+# Validate branch name against regex
+if [[ "$BRANCH_NAME" =~ $VALID_BRANCH_REGEX ]]; then
+  echo -e "${GREEN}Current branch name is valid: ${BRANCH_NAME}${NOCOLOR}"
+  # You can put additional actions here (e.g., tests, linting)
+  exit 0
+else
+  echo -e "\n${RED}Pre-push hook: Invalid branch name!${NOCOLOR}"
+  echo -e "Branch name must follow these patterns (case-sensitive):"
+  echo -e " - feature/IDDS-1234[-optional-description]"
+  echo -e " - hotfix/IDDS-1234[-optional-description]"
+  echo -e " - bugfix/IDDS-1234[-optional-description]"
+  echo -e " - library/IDDS-1234[-optional-description]"
+  echo -e " - prerelease/IDDS-1234[-optional-description]"
+  echo -e " - release/IDDS-1234[-optional-description]"
+  echo -e " - dev/IDDS-1234[-optional-description]"
+  echo -e " - improvement/IDDS-1234[-optional-description]"
+  echo -e " - IDDS-1234[-optional-description]"
+  echo -e " - main (only this branch name allowed directly)"
+  echo -e "\nYou cannot push directly to these protected branches: ${BRANCHES_TO_SKIP[*]}"
+  echo -e "\nCurrent branch name: ${BRANCH_NAME}"
+  echo -e "\nTo rename your branch, run:"
+  echo -e "  git branch -m feature/IDDS-1234-short-description"
+  exit 1
+fi
