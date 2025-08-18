@@ -7,21 +7,25 @@ Hooks are available under scripts/hooks. They need to be shared for each teammem
 
 Skip hooks by using either `-n` or `--no-verify`.
 
+## TODOs
+
+- [ ] Get `test-pre-push-tf`s to pass (need to change logic on `pre-push-tf`). Consider testing them in the same suite.
+- [ ] Put all `pre-push` scripts together and test if functionality still intact. Original unit tests should still work.
 
 ## Pre-push Hook
 
 This hook attempts to address the following needs:
 
-- ensure `terraform fmt` can be run without errors if files inside /terraform/ were modified [DDDS-18](https://dat.jeppesen.com/jira/browse/DDDS-18)
-- ensure `terraform validate` can be run without errors if files inside /terraform/ were modified [DDDS-19](https://dat.jeppesen.com/jira/browse/DDDS-19)
-- ensure push is denied if message if branch name does not meet validation criteria [DDDS-20](https://dat.jeppesen.com/jira/browse/DDDS-20)
+- ensure `terraform fmt` can be run without errors if files inside /terraform/ were modified [(DDDS-18)](https://dat.jeppesen.com/jira/browse/DDDS-18)
+- ensure `terraform validate` can be run without errors if files inside /terraform/ were modified [(DDDS-19)](https://dat.jeppesen.com/jira/browse/DDDS-19)
+- ensure push is denied if message if branch name does not meet validation criteria [(DDDS-20)](https://dat.jeppesen.com/jira/browse/DDDS-20)
 
-Specific validation criteria can be found in the links above.
+Specific validation criteria can be found in the links above. Preliminarily built separatedly (with `pre-push-tf` and `pre-push-naming`). **TODO**: put them together 
 
 ## Pre-commit-message Hook
 
 This hook attempts to address the following need:
-- Pre-pen ticket number/branch name into message [DDDS-17](https://dat.jeppesen.com/jira/browse/DDDS-17)
+- Pre-pen ticket number/branch name into message [(DDDS-17)](https://dat.jeppesen.com/jira/browse/DDDS-17)
 
 Specific validation criteria can be found in the link above.
 
@@ -44,17 +48,25 @@ Assumes your pre-push hook is located at `scripts/hooks/pre-push`, AND you have 
 
 Testing suite was made with the detailed given-when-then validation criteria from each ticket mentioned above.
 
+Before running these make sure the scripts are executable by running the below commands:
+
+```bash
+chmod +x scripts/hooks/pre-push-naming
+chmod +x scripts/hooks/pre-push-tf
+chmod +x scripts/hooks/prepare-commit-msg
+```
+
 ### test-pre-push-tf-fmt
 
 - Creates a temporary Git repo.
-- Copies your pre-push hook into `.git/hooks/.`
+- Copies the pre-push-tf hook into `.git/hooks/.`
 - Creates and commits files under `/terraform/` and outside `/terraform/.`
 - Modifies files to simulate the three scenarios:
     1. Modified `/terraform/` files with formatting issues that terraform fmt can fix automatically.
     2. Modified files outside `/terraform/.`
     3. Modified `/terraform/` files with formatting issues that terraform fmt cannot fix automatically (simulate by making a file that terraform fmt won't fix). (**TODO:** currently fails bc `terraform fmt` does not catch things it cannot fix...)
 - Attempts to push (simulates by invoking the hook directly).
-- Checks the hook behavior matches your validation criteria.
+- Checks the hook behavior matches the validation criteria.
 
 #### Running it:
 Make sure you run these in the root dir:
@@ -65,17 +77,57 @@ Make sure you run these in the root dir:
 ### test-pre-push-tf-validate
 
 - Creates a temporary Git repo.
-- Copies your pre-push hook into `.git/hooks/.`
+- Copies the pre-push-tf hook into `.git/hooks/.`
 - Creates and commits files under `/terraform/` and outside `/terraform/.`
 - Modifies files to simulate the three scenarios:
     1. Modifies files with fixable formatting issues. The hook should fix formatting, validate successfully, and allow the push.
     2. Modifies files outside of `/terraform/`. The hook should skip formatting and validation, allowing the push.
     3. Modifies `/terraform/` files with invalid Terraform config (fails terraform validate). The hook should block the push with an error. (**TODO:** fails but shouldn't)
 - Attempts to push (simulates by invoking the hook directly).
-- Checks the hook behavior matches your validation criteria.
+- Checks the hook behavior matches the validation criteria.
 
 #### Running it:
 Make sure you run these in the root dir:
 1. Run `chmod +x scripts/hooks/tests/test-pre-push-tf-validate` to make file executable
 2. Run `./scripts/hooks/tests/test-pre-push-tf-validate` to run tests
+3. Test conclusions should display in terminal
+
+### test-pre-push-naming
+
+- Creates a temporary Git repo.
+- Copies the pre-push-naming hook into `.git/hooks/.`
+- Defines protected branches (`master`, `production`, and `staging`)
+- Defines and checks out different branches to see if `push` will be allowed:
+    1. Pushing from a protected branch like `main`, `master`, `production`.
+    2. Valid branch examples:
+        - `feature/IDDS-1234`
+        - `hotfix/IDDS-4567-suffix`
+        - `IDDS-7890`
+    3. Invalid branch examples:
+        - `dev/idds-0001` (lowercase prefix)
+        - `feature/IDDS-abc` (non-numeric)
+        - `idds-5678` (lowercase Jira ID)
+
+#### Running it:
+Make sure you run these in the root dir:
+1. Run `chmod +x scripts/hooks/tests/test-pre-push-naming` to make file executable
+2. Run `./scripts/hooks/tests/test-pre-push-naming` to run tests
+3. Test conclusions should display in terminal
+
+### test-prepare-commit-msg
+
+- Creates a temporary Git repo.
+- Copies the prepare-commit-msg hook into `.git/hooks/.`
+- Runs multiple tests by creating branches with and without Jira ticket IDs and making commits:
+    1. Message without ticket number 
+        - branch: "DDDS-123-add-login", initial message: "Implement login handler", final message: "DDDS-123: Implement login handler"
+    2. Message with ticket number
+        - branch: "DDDS-321-existing", initial message: "DDDS-321: Fix bug", final message: "DDDS-321: Fix bug"
+    2. Message and branch with no ticket pattern (leaves it unchanged).
+- Checks whether the commit message is automatically updated to start with `<TICKET-ID>: <message>`
+
+#### Running it:
+Make sure you run these in the root dir:
+1. Run `chmod +x scripts/hooks/tests/test-prepare-commit-msg` to make file executable
+2. Run `.scripts/hooks/tests/test-prepare-commit-msg` to run tests
 3. Test conclusions should display in terminal
