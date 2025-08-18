@@ -33,19 +33,10 @@ if [[ "$BRANCH_NAME" =~ $VALID_BRANCH_REGEX ]]; then
   # You can put additional actions here (e.g., tests, linting)
   exit 0
 else
-  echo -e "\n${RED}Pre-push hook: Invalid branch name!${NOCOLOR}"
-  echo -e "Branch name must follow these patterns (case-sensitive):"
-  echo -e " - feature/IDDS-1234[-optional-description]"
-  echo -e " - hotfix/IDDS-1234[-optional-description]"
-  echo -e " - bugfix/IDDS-1234[-optional-description]"
-  echo -e " - library/IDDS-1234[-optional-description]"
-  echo -e " - prerelease/IDDS-1234[-optional-description]"
-  echo -e " - release/IDDS-1234[-optional-description]"
-  echo -e " - dev/IDDS-1234[-optional-description]"
-  echo -e " - improvement/IDDS-1234[-optional-description]"
-  echo -e " - IDDS-1234[-optional-description]"
-  echo -e " - main (only this branch name allowed directly)"
-  echo -e "\nYou cannot push directly to these protected branches: ${BRANCHES_TO_SKIP[*]}"
+  echo -e "\n${RED}Pre-commit: Please correct the branch name${NOCOLOR}"
+  printf "\nBranch name not as per the defined rules (e.g.:  "
+  echo -e "${GREEN}feature, hotfix, bugfix, library, prerelease, release, dev, improvement, hotfix-102, XXXX-1234, XXXX-1234-something${NOCOLOR})\n"
+  echo -e "${ORANGE}You cannot push in these branches directly: ${BRANCHES_TO_SKIP[@]}"
   echo -e "\nCurrent branch name: ${BRANCH_NAME}"
   echo -e "\nTo rename your branch, run:"
   echo -e "  git branch -m feature/IDDS-1234-short-description"
