@@ -78,12 +78,12 @@ run_test() {
 # Tests
 #run_test "main"                         1
 run_test "production"                  1
-run_test "feature/IDDS-1234"           0
-run_test "hotfix/IDDS-4567-suffix"     0
-run_test "dev/idds-0001"               1   # lowercase prefix
-run_test "feature/IDDS-abc"            1   # non-numeric
-run_test "IDDS-7890"                   0   # top-level branch, valid
-run_test "IDDS-5678-extra"             0
-run_test "idds-5678"                   1   # lowercase top-level
+run_test "feature/DDDS-1234"           0
+run_test "hotfix/DDDS-4567-suffix"     0
+run_test "dev/ddds-0001"               1   # lowercase prefix
+run_test "feature/DDDS-abc"            1   # non-numeric
+run_test "DDDS-7890"                   0   # top-level branch, valid
+run_test "DDDS-5678-extra"             0
+run_test "ddds-5678"                   1   # lowercase top-level
 
 echo "${GREEN}All naming tests completed successfully.${NOCOLOR}"

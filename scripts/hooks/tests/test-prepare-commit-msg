@@ -1,0 +1,73 @@
+#!/bin/bash
+set -e
+
+# Colors
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NOCOLOR='\033[0m'
+
+echo "Starting prepare-commit-msg hook tests..."
+
+HOOK_PATH="$(pwd)/scripts/hooks/prepare-commit-msg"
+
+# Create temp repo
+TMP_REPO=$(mktemp -d)
+echo "Created temp repo at: $TMP_REPO"
+cd "$TMP_REPO"
+
+git init -q
+echo "init" > README.md
+git add README.md
+git commit -m "initial" -q
+
+# Install hook
+mkdir -p .git/hooks
+cp "$HOOK_PATH" .git/hooks/prepare-commit-msg
+chmod +x .git/hooks/prepare-commit-msg
+
+# Function to run individual tests
+run_test() {
+  local branch_name="$1"
+  local commit_msg="$2"
+  local expected_msg="$3"
+
+  echo "Testing on branch: $branch_name"
+  git checkout -b "$branch_name" -q
+
+  echo "console.log('hello');" > test.js
+  git add test.js
+
+  GIT_EDITOR=true git commit -m "$commit_msg"
+
+  final_msg=$(git log -1 --pretty=%B)
+  echo "Final commit message: '$final_msg'"
+
+  if [[ "$final_msg" == "$expected_msg" ]]; then
+    echo -e "${GREEN}PASS${NOCOLOR}"
+  else
+    echo -e "${RED}FAIL - expected: '$expected_msg'${NOCOLOR}"
+    exit 1
+  fi
+
+  # Cleanup
+  git checkout main -q
+  git branch -D "$branch_name" -q
+  rm -f test.js
+  echo
+}
+
+# Base branch to return to
+git checkout -b main -q
+
+# Run multiple scenarios
+run_test "DDDS-123-add-login" "Implement login handler" "DDDS-123: Implement login handler"
+run_test "DDDS-456-refactor-auth" "Refactor auth flow" "DDDS-456: Refactor auth flow"
+run_test "feature/DDDS-789-new-ui" "Add new UI module" "DDDS-789: Add new UI module"
+
+# Already prefixed message should not be changed
+run_test "DDDS-321-existing" "DDDS-321: Fix bug" "DDDS-321: Fix bug"
+
+# No ticket pattern — should leave message unchanged
+run_test "some-random-branch" "No ticket here" "No ticket here"
+
+echo -e "${GREEN} All tests passed successfully.${NOCOLOR}"

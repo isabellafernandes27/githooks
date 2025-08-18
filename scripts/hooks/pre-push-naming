@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Ticket DDDS-20: Deny push if branch does not meet validation criteria
+
 # Colors for messages
 RED='\033[0;31m'
 GREEN='\033[0;32m'
