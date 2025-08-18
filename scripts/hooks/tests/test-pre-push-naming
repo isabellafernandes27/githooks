@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Test runner
+test_hook() {
+    local branch_name="$1"
+    local expected_result="$2"
+
+    git checkout -b "$branch_name" >/dev/null 2>&1
+    echo "test" > test.txt
+    git add test.txt
+    git commit -m "test commit" >/dev/null
+
+    # Simulate push
+    echo "Simulating push from $branch_name -> main"
+    echo "refs/heads/$branch_name HEAD refs/heads/main HEAD" | .git/hooks/pre-push-naming
+
+    result=$?
+    if [[ $result -eq $expected_result ]]; then
+        echo "Test passed for branch '$branch_name' (expected: $expected_result, got: $result)"
+    else
+        echo "Test failed for branch '$branch_name' (expected: $expected_result, got: $result)"
+    fi
+
+    git checkout main >/dev/null 2>&1 # Cleanup
+    git branch -D "$branch_name" >/dev/null 2>&1
+    if [[ -f test.txt ]]; then
+        rm test.txt
+    fi
+    git reset HEAD~1 --quiet
+}
+
+# Setup
+git checkout -b main >/dev/null 2>&1 || git checkout main
+
+# Tests
+test_hook "DDDS-123: add-login" 0     # should pass
+test_hook "feature/add-login" 1       # should fail
+test_hook "DDDS-abc: invalid" 1       # should fail
+test_hook "DDDS-999: fix-bug" 0       # should pass
+test_hook "DDDS-9143299: fix-bug" 0   # should pass
+test_hook "DDDS-456:" 1                       # No summary
+test_hook "DDDS-456:    " 1                   # Blank summary
+test_hook "DDDS-789: fix something" 0         # Spaces allowed

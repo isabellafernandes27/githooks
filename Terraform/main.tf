@@ -15,7 +15,7 @@ provider "aws" {
 
 # Configure AWS provider profile 
 provider "aws" {
-    alias   = "heritage-np" # to check if terraform fmt catches error
+  #  alias   = "heritage-np" # to check if terraform fmt catches error
   region  = "us-east-1"
   profile = "isabella-heritage-np"
 }

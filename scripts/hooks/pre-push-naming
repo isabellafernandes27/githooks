@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Get the current branch name (local)
+branch_name=$(git rev-parse --abbrev-ref HEAD)
+
+# Define naming pattern: DDDS-<number>: <summary>
+pattern='^DDDS-[0-9]+: .+'
+
+# Read remote ref info from stdin
+while read local_ref local_sha remote_ref remote_sha; do
+    # Only enforce when pushing to main
+    if [[ "$remote_ref" == "refs/heads/main" ]]; then
+        if [[ "$branch_name" =~ $pattern ]]; then
+            exit 0
+        else
+            echo "❌ Push rejected!"
+            echo "Your branch name: '$branch_name'"
+            echo "Branch name must match pattern: 'DDDS-<number>: <summary>'"
+            echo "Example: 'DDDS-123: add-login-handler'"
+            echo "To rename:"
+            echo "  git branch -m 'DDDS-123: add-summary'"
+            exit 1
+        fi
+    fi
+done
+
+exit 0
