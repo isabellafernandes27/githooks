@@ -5,13 +5,17 @@ Sample Java project with sample Terraform files were built just to mimic initial
 
 Hooks are available under scripts/hooks. They need to be shared for each teammember to put inside their personal .git/hooks directory. It is possible to enforce their usage through Gradle installation (TBD). A testing suite has been provided for the hooks under scripts/tests.
 
-Skip hooks by using either `-n` or `--no-verify`.
+Skip hooks by using either `-n` or `--no-verify` when running `git`.
 
-## TODOs
-
-- [X] Get `test-pre-push-tf`s to pass (need to change logic on `pre-push-tf`). Consider testing them in the same suite.
-- [X] Put all `pre-push` scripts together and test if functionality still intact. Original unit tests should still work. 
-- [X] Create new unit tests for the full `pre-push` script to test integrated functionality.
+## Table Of Contents
+ - [Pre-push Hook](#pre-push-hook)
+ - [Pre-commit-message Hook](#pre-commit-message-hook)
+ - [Testing suite](#testing-suite)  
+    - [test-pre-push-tf-fmt](#test-pre-push-tf-fmt)
+    - [test-pre-push-tf-validate](#test-pre-push-tf-validate)
+    - [test-pre-push-naming](#test-pre-push-naming)
+    - [test-prepare-commit-msg](#test-prepare-commit-msg)
+    - [test-pre-push](#test-pre-push)
 
 ## Pre-push Hook
 
