@@ -1,1 +1,131 @@
 #!/bin/sh
+set -e
+
+# Colors for messages
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+ORANGE=$'\033[0;33m'
+NOCOLOR=$'\033[0m'
+
+HOOK_PATH="$(pwd)/scripts/hooks/pre-push"  # path to your combined pre-push hook
+
+printf "\n${NOCOLOR}Starting combined pre-push hook tests..."
+
+TMP_REPO=$(mktemp -d)
+printf "\nCreated temp repo at $TMP_REPO"
+cd "$TMP_REPO"
+
+git init -q
+
+mkdir terraform
+
+# Create a well-formed Terraform file
+echo 'resource "null_resource" "example_valid" {}' > terraform/valid.tf
+
+# Add dummy provider to ensure terraform validate can run
+cat <<EOF > terraform/provider.tf
+terraform {
+  required_providers {
+    null = {
+      source = "hashicorp/null"
+      version = "3.2.1"
+    }
+  }
+}
+provider "null" {}
+EOF
+
+git add terraform/valid.tf
+git commit -m "Initial valid Terraform file" -q
+
+# Install the pre-push hook onto temp repo
+mkdir -p .git/hooks
+cp "$HOOK_PATH" .git/hooks/pre-push
+chmod +x .git/hooks/pre-push
+
+simulate_push() {
+  local_ref=$(git rev-parse --abbrev-ref HEAD)
+  local_sha=$(git rev-parse HEAD)
+  remote_ref="refs/heads/main"
+  remote_sha="0000000000000000000000000000000000000000"
+  echo "$local_ref $local_sha $remote_ref $remote_sha" | .git/hooks/pre-push
+}
+
+# Test 1: Valid branch, valid terraform (expect success)
+git checkout -b feature/DPDS-1234-something
+
+echo 'resource "null_resource" "another_example" {}' > terraform/test1.tf
+git add terraform/test1.tf
+git commit -m "Add valid Terraform to valid branch" -q
+
+echo "Test 1: Valid branch + valid Terraform"
+if simulate_push; then
+  printf "${GREEN}\nPASS: Push succeeded as expected"
+else
+  printf "${RED}\nFAIL: Push was blocked unexpectedly"
+  exit 1
+fi
+
+# Test 2: Invalid branch name (expect blocked)
+git checkout -b badbranchname
+echo 'resource "null_resource" "bad_branch" {}' > terraform/test2.tf
+git add terraform/test2.tf
+git commit -m "Add file on invalid branch" -q
+
+echo "Test 2: Invalid branch name"
+if simulate_push; then
+  printf "${RED}\nFAIL: Push succeeded but should have been blocked"
+  exit 1
+else
+  printf "${GREEN}\nPASS: Push was blocked as expected"
+fi
+
+# Test 3: Valid branch + invalid Terraform (expect blocked)
+git checkout -b bugfix/DPDS-1234-invalid-tf
+cat <<EOF > terraform/test3.tf
+resource "null_resource" "bad_example" {
+  invalid_block {
+    content = "invalid"
+  }
+}
+EOF
+git add terraform/test3.tf
+git commit -m "Add invalid Terraform" -q
+
+echo "Test 3: Valid branch + invalid Terraform"
+if simulate_push; then
+  printf "${RED}\nFAIL: Push succeeded but should have been blocked due to validation"
+  exit 1
+else
+  printf "${GREEN}\nPASS: Push was blocked as expected"
+fi
+
+# Test 4: Protected branch name (production)
+git checkout -b production
+echo 'resource "null_resource" "production_branch_push" {}' > terraform/test4.tf
+git add terraform/test4.tf
+git commit -m "Try pushing to production" -q
+
+echo "Test 4: Protected branch (production)"
+if simulate_push; then
+  printf "${RED}\nFAIL: Push succeeded but should have been blocked (protected branch)"
+  exit 1
+else
+  printf "${GREEN}\nPASS: Push was blocked as expected for protected branch"
+fi
+
+# Test 5: Valid branch + no TF changes (should skip formatting)
+git checkout -b improvement/DPDS-5678-no-tf
+echo 'console.log("hello world");' > script.js
+git add script.js
+git commit -m "Add non-TF file" -q
+
+echo "Test 5: Valid branch, no Terraform changes"
+if simulate_push; then
+  printf "${GREEN}\nPASS: Push succeeded as expected (no TF changes)"
+else
+  printf "${RED}\nFAIL: Push blocked unexpectedly (no TF changes)"
+  exit 1
+fi
+
+printf "${GREEN}\nAll tests passed!${NOCOLOR}\n"

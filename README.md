@@ -10,7 +10,8 @@ Skip hooks by using either `-n` or `--no-verify`.
 ## TODOs
 
 - [X] Get `test-pre-push-tf`s to pass (need to change logic on `pre-push-tf`). Consider testing them in the same suite.
-- [ ] Put all `pre-push` scripts together and test if functionality still intact. Original unit tests should still work.
+- [ ] Put all `pre-push` scripts together and test if functionality still intact. Original unit tests should still work. 
+- [ ] Create new unit tests for the full `pre-push` script to test integrated functionality.
 
 ## Pre-push Hook
 
@@ -20,7 +21,7 @@ This hook attempts to address the following needs:
 - ensure `terraform validate` can be run without errors if files inside /terraform/ were modified [(DDDS-19)](https://dat.jeppesen.com/jira/browse/DDDS-19)
 - ensure push is denied if message if branch name does not meet validation criteria [(DDDS-20)](https://dat.jeppesen.com/jira/browse/DDDS-20)
 
-Specific validation criteria can be found in the links above. Preliminarily built separatedly (with `pre-push-tf` and `pre-push-naming`). **TODO**: put them together 
+Specific validation criteria can be found in the links above. Preliminarily built separatedly (with `pre-push-tf` and `pre-push-naming`).
 
 ## Pre-commit-message Hook
 

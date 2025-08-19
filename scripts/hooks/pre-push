@@ -1,0 +1,119 @@
+#!/bin/sh
+
+# Colors for messages
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+ORANGE=$'\033[0;33m'
+NOCOLOR=$'\033[0m'
+BOLD=$'\033[1m'
+
+# Branches where pushes are disallowed
+if [ -z "$BRANCHES_TO_SKIP" ]; then
+  BRANCHES_TO_SKIP=(master production staging)
+fi
+
+# Regex to validate branch names
+VALID_BRANCH_REGEX="(^(feature|hotfix|bugfix|library|prerelease|release|dev|improvement)\/[A-Z]+\-[0-9]+(-.*)?$)|^([A-Z]+\-[0-9]+(-.*)?$)|^(main)$"
+
+# Get current branch name
+BRANCH_NAME="$(git rev-parse --abbrev-ref HEAD)"
+
+# Denies push if branch name does not meet validation criteria:
+
+# Check if pushing to a protected branch (skip validation)
+for branch in "${BRANCHES_TO_SKIP[@]}"; do
+  if [[ "$BRANCH_NAME" == "$branch" ]]; then
+    printf "${RED}\nPushes directly to branch ${BOLD}'${branch}' ${NOCOLOR}${RED}are not allowed.${NOCOLOR}"
+    exit 1
+  fi
+done
+
+# Validate branch name against regex
+if [[ ! "$BRANCH_NAME" =~ $VALID_BRANCH_REGEX ]]; then
+  printf "\n${RED}Pre-commit: Please correct the branch name${NOCOLOR}"
+  printf "\nBranch name not as per the defined rules (e.g.:  "
+  printf "${BOLD}feature, hotfix, bugfix, library, prerelease, release, dev, improvement, hotfix-102, XXXX-1234, XXXX-1234-something${NOCOLOR})\n"
+  printf "${NOCOLOR}You cannot push in these branches directly: ${BRANCHES_TO_SKIP[@]}"
+  printf "\nCurrent branch name: ${BOLD}${ORANGE}${BRANCH_NAME}"
+  printf "\n${NOCOLOR}To rename your branch, run:\n"
+  printf "   git branch -m feature/IDDS-1234-short-description${NOCOLOR}"
+  exit 1
+fi
+
+# If branch name meets criteria, move forward with terraform fmt and validate
+
+# Check if /terraform directory exists
+if [ ! -d "terraform" ]; then
+  printf "${RED}Directory 'terraform' not found. Aborting push.${NOCOLOR}"
+  exit 1
+fi
+
+terraform_files_changed=0  # Initialize flag
+
+# Read refs from stdin
+while read local_ref local_sha remote_ref remote_sha
+do
+  # Determine diff range
+  if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+    # New branch or new ref — use the parent of local commit
+    if git rev-parse "${local_sha}^" >/dev/null 2>&1; then
+      diff_range="${local_sha}^..${local_sha}"
+    else
+      # Root/first commit — diff against empty tree hash
+      diff_range=$(git hash-object -t tree /dev/null)..${local_sha}
+    fi
+  else 
+    # else diff is the difference between commited (local) and remote
+    diff_range="$remote_sha..$local_sha"
+  fi
+
+  # Get list of changed .tf files under terraform/
+  changed_files=$(git diff --name-only "$diff_range" -- 'terraform/*.tf')
+
+  if [ -z "$changed_files" ]; then
+    # No terraform files changed, continue to next ref or allow push
+    printf "\n${GREEN}${BOLD}No terraform files changed. ${NOCOLOR}Skipping formatting check..."
+    continue
+  fi
+  
+  terraform_files_changed=1  # Mark that terraform files changed
+
+  # Check formatting on each changed file
+  for file in $changed_files; do
+    printf "\n${ORANGE}Running terraform fmt on: $file${NOCOLOR}\n"
+    terraform fmt "$file"
+    git add "$file"
+  done
+done
+
+# If terraform files changed, run terraform validate
+if [ "$terraform_files_changed" -eq 1 ]; then
+  cd terraform || {
+    printf "\n${RED}Failed to enter terraform directory.${NOCOLOR}"
+    exit 1
+  }
+  # Initialize terraform (no backend)
+  terraform init -backend=false -input=false >/dev/null 2>&1
+
+  if ! terraform validate; then
+    printf "\n${RED}Terraform validation failed. Please fix errors before pushing.${NOCOLOR}"
+    exit 1
+  fi
+  cd - >/dev/null || exit 1
+
+  # If formatting changes were staged, amend the commit
+  if ! git diff --cached --quiet -- 'terraform/*.tf'; then
+    printf "\n${ORANGE}Amending commit to include formatting changes...${NOCOLOR}"
+    git commit --amend --no-edit >/dev/null
+  fi
+
+  # Final check: if diffs still exist (unstaged formatting changes), block push
+  if ! git diff --quiet -- 'terraform/*.tf'; then
+    printf "\n${RED}Uncommitted formatting changes remain. Please review and commit before pushing.${NOCOLOR}"
+    exit 1
+  fi
+fi
+
+# All checks passed or no terraform files changed
+printf "\n${NOCOLOR}Terraform validation ${BOLD}${GREEN}succeeded!${NOCOLOR}\n"
+exit 0
