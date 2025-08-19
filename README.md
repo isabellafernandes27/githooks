@@ -9,7 +9,7 @@ Skip hooks by using either `-n` or `--no-verify`.
 
 ## TODOs
 
-- [ ] Get `test-pre-push-tf`s to pass (need to change logic on `pre-push-tf`). Consider testing them in the same suite.
+- [X] Get `test-pre-push-tf`s to pass (need to change logic on `pre-push-tf`). Consider testing them in the same suite.
 - [ ] Put all `pre-push` scripts together and test if functionality still intact. Original unit tests should still work.
 
 ## Pre-push Hook
@@ -64,7 +64,7 @@ chmod +x scripts/hooks/prepare-commit-msg
 - Modifies files to simulate the three scenarios:
     1. Modified `/terraform/` files with formatting issues that terraform fmt can fix automatically.
     2. Modified files outside `/terraform/.`
-    3. Modified `/terraform/` files with formatting issues that terraform fmt cannot fix automatically (simulate by making a file that terraform fmt won't fix). (**TODO:** currently fails bc `terraform fmt` does not catch things it cannot fix...)
+    3. Modified `/terraform/` files with formatting issues that terraform fmt cannot fix automatically (simulated by making a file that terraform fmt won't fix). 
 - Attempts to push (simulates by invoking the hook directly).
 - Checks the hook behavior matches the validation criteria.
 
@@ -79,10 +79,9 @@ Make sure you run these in the root dir:
 - Creates a temporary Git repo.
 - Copies the pre-push-tf hook into `.git/hooks/.`
 - Creates and commits files under `/terraform/` and outside `/terraform/.`
-- Modifies files to simulate the three scenarios:
-    1. Modifies files with fixable formatting issues. The hook should fix formatting, validate successfully, and allow the push.
-    2. Modifies files outside of `/terraform/`. The hook should skip formatting and validation, allowing the push.
-    3. Modifies `/terraform/` files with invalid Terraform config (fails terraform validate). The hook should block the push with an error. (**TODO:** fails but shouldn't)
+- Modifies files to simulate the two scenarios:
+    1. Valid.tf file
+    2. Invalid .tf file 
 - Attempts to push (simulates by invoking the hook directly).
 - Checks the hook behavior matches the validation criteria.
 

@@ -3,9 +3,15 @@
 # Ticket DDDS-18: Terraform fmt
 # Ticket DDDS-19: Terraform validate
 
+# Colors for messages
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+ORANGE=$'\033[0;33m'
+NOCOLOR=$'\033[0m'
+
 # Check if /terraform directory exists
 if [ ! -d "terraform" ]; then
-  echo "Directory 'terraform' not found. Aborting push."
+  echo "${RED}Directory 'terraform' not found. Aborting push."
   exit 1
 fi
 
@@ -16,9 +22,15 @@ while read local_ref local_sha remote_ref remote_sha
 do
   # Determine diff range
   if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
-    # New branch or new ref, diff against empty tree
-    diff_range="$local_sha"
-  else
+    # New branch or new ref — use the parent of local commit
+    if git rev-parse "${local_sha}^" >/dev/null 2>&1; then
+      diff_range="${local_sha}^..${local_sha}"
+    else
+      # Root/first commit — diff against empty tree hash
+      diff_range=$(git hash-object -t tree /dev/null)..${local_sha}
+    fi
+  else 
+    # else diff is the difference between commited (local) and remote
     diff_range="$remote_sha..$local_sha"
   fi
 
@@ -27,6 +39,7 @@ do
 
   if [ -z "$changed_files" ]; then
     # No terraform files changed, continue to next ref or allow push
+    echo "${GREEN}No terraform files changed. Skipping formatting check..."
     continue
   fi
   
@@ -34,10 +47,9 @@ do
 
   # Check formatting on each changed file
   for file in $changed_files; do
-    if ! terraform fmt -check "$file"; then
-      echo "Terraform file '$file' is not properly formatted. Please run 'terraform fmt $file'."
-      exit 1
-    fi
+    echo "${ORANGE}Running terraform fmt on: $file"
+    terraform fmt "$file"
+    git add "$file"
   done
 done
 
@@ -46,17 +58,31 @@ done
 # If terraform files changed, run terraform validate
 if [ "$terraform_files_changed" -eq 1 ]; then
   cd terraform || {
-    echo "Failed to enter terraform directory."
+    echo "${RED}Failed to enter terraform directory."
     exit 1
   }
   # Initialize terraform (no backend)
   terraform init -backend=false -input=false >/dev/null 2>&1
 
   if ! terraform validate; then
-    echo "Terraform validation failed. Please fix errors before pushing."
+    echo "${RED}Terraform validation failed. Please fix errors before pushing."
+    exit 1
+  fi
+  cd - >/dev/null || exit 1
+
+  # If formatting changes were staged, amend the commit
+  if ! git diff --cached --quiet -- 'terraform/*.tf'; then
+    echo "${ORANGE}Amending commit to include formatting changes..."
+    git commit --amend --no-edit >/dev/null
+  fi
+
+  # Final check: if diffs still exist (unstaged formatting changes), block push
+  if ! git diff --quiet -- 'terraform/*.tf'; then
+    echo "${RED}Uncommitted formatting changes remain. Please review and commit before pushing."
     exit 1
   fi
 fi
 
 # All checks passed or no terraform files changed
+echo "${GREEN}Terraform formatting and validation checks passed."
 exit 0

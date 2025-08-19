@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# Colors for messages
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+ORANGE=$'\033[0;33m'
+NOCOLOR=$'\033[0m'
+
 # Location of the pre-push-tf hook to test
 HOOK_PATH="$(pwd)/scripts/hooks/pre-push-tf"
 
@@ -15,7 +21,7 @@ git init -q
 
 # Setup terraform directory and example files
 mkdir terraform
-echo 'resource "null_resource" "example" {}' > terraform/formatted.tf
+echo 'resource "null_resource" "example1" {}' > terraform/formatted.tf
 
 # Add a well-formatted terraform file and commit
 git add terraform/formatted.tf
@@ -39,23 +45,29 @@ simulate_push() {
 }
 
 # 1) Test: Modified /terraform/ files with formatting issues that terraform fmt can fix automatically
-echo -e 'resource "null_resource" "example" \n{\n}' > terraform/badformat.tf
+cat <<EOF > terraform/badformat.tf
+resource "null_resource" "example2"{
+provisioner "local-exec" {
+  command = "echo Hello, World"
+}
+}
+EOF
 git add terraform/badformat.tf
 git commit -m "Add badly formatted terraform file" -q
 
 echo "Test 1: Modified /terraform/ files with fixable formatting issues"
 if simulate_push; then
-  echo "PASS: Push succeeded after hook fixed formatting and amended commit"
+  echo "${GREEN}PASS: Push succeeded after hook fixed formatting and amended commit"
 else
-  echo "FAIL: Push blocked unexpectedly"
+  echo "${RED}FAIL: Push blocked unexpectedly"
   exit 1
 fi
 
 # Verify that the file was reformatted and committed (no uncommitted changes)
 if git diff --quiet; then
-  echo "PASS: Formatting changes were applied and committed"
+  echo "${GREEN}PASS: Formatting changes were applied and committed"
 else
-  echo "FAIL: Formatting changes were not committed"
+  echo "${RED}FAIL: Formatting changes were not committed"
   exit 1
 fi
 
@@ -66,31 +78,24 @@ git commit -m "Add file outside terraform" -q
 
 echo "Test 2: Modified files outside /terraform/"
 if simulate_push; then
-  echo "PASS: Push succeeded without running terraform fmt"
+  echo "${GREEN}PASS: Push succeeded without running terraform fmt"
 else
-  echo "FAIL: Push blocked unexpectedly"
+  echo "${RED}FAIL: Push blocked unexpectedly"
   exit 1
 fi
 
 # 3) Test: Modified /terraform/ files with formatting issues that terraform fmt cannot fix automatically
 # To simulate this, create a file with invalid syntax that terraform fmt won't fix
-cat <<EOF > terraform/unfixable.tf
-resource "aws_instance" "example" {
-  tags = {
-    Name = $var.name-web_app  // Invalid character '$' and incorrect interpolation
-  }
-}
-EOF
-
+echo -e 'resource "null_resource" "example" \n{\n}' > terraform/unfixable.tf
 git add terraform/unfixable.tf
 git commit -m "Add unfixable terraform file" -q
 
 echo "Test 3: Modified /terraform/ files with unfixable formatting issues"
 if simulate_push; then
-  echo "FAIL: Push succeeded but should have been blocked"
+  echo "${RED}FAIL: Push succeeded but should have been blocked"
   exit 1
 else
-  echo "PASS: Push blocked as expected due to unfixable formatting issues"
+  echo "${GREEN}PASS: Push blocked as expected due to unfixable formatting issues"
 fi
 
 echo "All tests completed."
