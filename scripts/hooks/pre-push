@@ -9,7 +9,7 @@ BOLD=$'\033[1m'
 
 # Branches where pushes are disallowed
 if [ -z "$BRANCHES_TO_SKIP" ]; then
-  BRANCHES_TO_SKIP=(master production staging)
+  BRANCHES_TO_SKIP="master production staging"
 fi
 
 # Regex to validate branch names
@@ -21,7 +21,7 @@ BRANCH_NAME="$(git rev-parse --abbrev-ref HEAD)"
 # Denies push if branch name does not meet validation criteria:
 
 # Check if pushing to a protected branch (skip validation)
-for branch in "${BRANCHES_TO_SKIP[@]}"; do
+for branch in ${BRANCHES_TO_SKIP}; do
   if [[ "$BRANCH_NAME" == "$branch" ]]; then
     printf "${RED}\nPushes directly to branch ${BOLD}'${branch}' ${NOCOLOR}${RED}are not allowed.${NOCOLOR}"
     exit 1
@@ -33,7 +33,7 @@ if [[ ! "$BRANCH_NAME" =~ $VALID_BRANCH_REGEX ]]; then
   printf "\n${RED}Pre-commit: Please correct the branch name${NOCOLOR}"
   printf "\nBranch name not as per the defined rules (e.g.:  "
   printf "${BOLD}feature, hotfix, bugfix, library, prerelease, release, dev, improvement, hotfix-102, XXXX-1234, XXXX-1234-something${NOCOLOR})\n"
-  printf "${NOCOLOR}You cannot push in these branches directly: ${BRANCHES_TO_SKIP[@]}"
+  printf "${NOCOLOR}You cannot push in these branches directly: ${BRANCHES_TO_SKIP}"
   printf "\nCurrent branch name: ${BOLD}${ORANGE}${BRANCH_NAME}"
   printf "\n${NOCOLOR}To rename your branch, run:\n"
   printf "   git branch -m feature/IDDS-1234-short-description${NOCOLOR}"

@@ -10,8 +10,8 @@ Skip hooks by using either `-n` or `--no-verify`.
 ## TODOs
 
 - [X] Get `test-pre-push-tf`s to pass (need to change logic on `pre-push-tf`). Consider testing them in the same suite.
-- [ ] Put all `pre-push` scripts together and test if functionality still intact. Original unit tests should still work. 
-- [ ] Create new unit tests for the full `pre-push` script to test integrated functionality.
+- [X] Put all `pre-push` scripts together and test if functionality still intact. Original unit tests should still work. 
+- [X] Create new unit tests for the full `pre-push` script to test integrated functionality.
 
 ## Pre-push Hook
 
@@ -21,7 +21,7 @@ This hook attempts to address the following needs:
 - ensure `terraform validate` can be run without errors if files inside /terraform/ were modified [(DDDS-19)](https://dat.jeppesen.com/jira/browse/DDDS-19)
 - ensure push is denied if message if branch name does not meet validation criteria [(DDDS-20)](https://dat.jeppesen.com/jira/browse/DDDS-20)
 
-Specific validation criteria can be found in the links above. Preliminarily built separatedly (with `pre-push-tf` and `pre-push-naming`).
+Specific validation criteria can be found in the links above. Preliminarily built separatedly (with `pre-push-tf` and `pre-push-naming`). Naming checks done before Terraform checks.
 
 ## Pre-commit-message Hook
 
@@ -54,6 +54,7 @@ Before running these make sure the scripts are executable by running the below c
 ```bash
 chmod +x scripts/hooks/pre-push-naming
 chmod +x scripts/hooks/pre-push-tf
+chmod +x scripts/hooks/pre-push
 chmod +x scripts/hooks/prepare-commit-msg
 ```
 
@@ -123,11 +124,29 @@ Make sure you run these in the root dir:
         - branch: "DDDS-123-add-login", initial message: "Implement login handler", final message: "DDDS-123: Implement login handler"
     2. Message with ticket number
         - branch: "DDDS-321-existing", initial message: "DDDS-321: Fix bug", final message: "DDDS-321: Fix bug"
-    2. Message and branch with no ticket pattern (leaves it unchanged).
+    3. Message and branch with no ticket pattern (leaves it unchanged).
 - Checks whether the commit message is automatically updated to start with `<TICKET-ID>: <message>`
 
 #### Running it:
 Make sure you run these in the root dir:
 1. Run `chmod +x scripts/hooks/tests/test-prepare-commit-msg` to make file executable
 2. Run `.scripts/hooks/tests/test-prepare-commit-msg` to run tests
+3. Test conclusions should display in terminal
+
+### test-pre-push
+
+- Creates a temporary Git repo.
+- Copies the pre-push hook into `.git/hooks/.`
+- Runs multiple tests combining branch naming and terraform file checks:
+    1. Valid branch name and valid terraform (base test, expects success).
+    2. Invalid branch name and valid terraform (expects to be blocked).
+    3. Valid branch name and invalid terraform (expects to be blocked).
+    4. Protected branch name (expects to be blocked).
+    5. Valid branch name and no terraform changes (expects success, should skip formatting).
+- Checks wether push succeeds or fails as expected
+
+#### Running it:
+Make sure you run these in the root dir:
+1. Run `chmod +x scripts/hooks/tests/test-pre-push` to make file executable
+2. Run `.scripts/hooks/tests/test-pre-push` to run tests
 3. Test conclusions should display in terminal
