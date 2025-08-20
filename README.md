@@ -8,6 +8,7 @@ Hooks are available under scripts/hooks. They need to be shared for each teammem
 Skip hooks by using either `-n` or `--no-verify` when running `git`.
 
 ## Table Of Contents
+ - [Todos](#todos)
  - [Pre-push Hook](#pre-push-hook)
  - [Pre-commit-message Hook](#pre-commit-message-hook)
  - [Testing suite](#testing-suite)  
@@ -16,6 +17,14 @@ Skip hooks by using either `-n` or `--no-verify` when running `git`.
     - [test-pre-push-naming](#test-pre-push-naming)
     - [test-prepare-commit-msg](#test-prepare-commit-msg)
     - [test-pre-push](#test-pre-push)
+
+## TODOs
+
+- [ ] change pre-push tf fmt to move on if `/terraform/` dir not found
+- [ ] look into git hooks repo for use with gradle build enforcement
+- [ ] look into stylesheet ticket
+- [ ] terraform will have a lot of folders/modules... adapt script to that and make testing more robust to ensure no hiccups
+- [ ] research how to automatically checkout hooks repo for enforcing implementation(may need to look into relative pathing)
 
 ## Pre-push Hook
 
