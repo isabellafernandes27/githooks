@@ -1,4 +1,4 @@
-# sample-project-githooks
+# Githooks
 As per Epic [DDDS-11](https://dat.jeppesen.com/jira/browse/DDDS-11), this aims to set up some githooks to help dev workflow.
 
 Sample Java project with sample Terraform files were built just to mimic initial work. 
@@ -6,6 +6,8 @@ Sample Java project with sample Terraform files were built just to mimic initial
 Hooks are available under scripts/hooks. They need to be shared for each teammember to put inside their personal .git/hooks directory. It is possible to enforce their usage through Gradle installation (TBD). A testing suite has been provided for the hooks under scripts/tests.
 
 Skip hooks by using either `-n` or `--no-verify` when running `git`.
+
+These scripts were made to run on Bash >=4.0. Installation instructions are available on section **TBD**.
 
 ## Table Of Contents
  - [Todos](#todos)
@@ -20,11 +22,41 @@ Skip hooks by using either `-n` or `--no-verify` when running `git`.
 
 ## TODOs
 
-- [ ] change pre-push tf fmt to move on if `/terraform/` dir not found
+- [x] change pre-push tf fmt to move on if `/terraform/` dir not found
 - [ ] look into git hooks repo for use with gradle build enforcement
 - [ ] look into stylesheet ticket
 - [ ] terraform will have a lot of folders/modules... adapt script to that and make testing more robust to ensure no hiccups
+- [ ] more robust testing for pre-push-naming, pre-push, and prepare-commit-msg
 - [ ] research how to automatically checkout hooks repo for enforcing implementation(may need to look into relative pathing)
+- [ ] Readme.md clean up and split, individual testing readmes
+- [ ] Installer with bash updates and usage
+- [ ] add something that stops hooks if shell under 4.0
+
+## Installation and Running the Project
+
+**todo**
+
+## Requirements
+
+- Bash 4.0 or newer is required to run the Git hook scripts and tests.
+    - ✅ Most Linux distros already ship Bash 4+
+    - ⚠️ macOS ships with Bash 3.2 by default — please install Bash via Homebrew:
+    
+    ```bash
+    brew install bash
+    ```
+
+    - To make sure you're using the right version:
+    
+    ```bash
+    bash --version
+    ```
+
+    - You can run a script with the Homebrew-installed Bash directly:
+
+    ```bash
+    /opt/homebrew/bin/bash ./scripts/hooks/pre-push
+    ```
 
 ## Pre-push Hook
 
@@ -35,6 +67,11 @@ This hook attempts to address the following needs:
 - ensure push is denied if message if branch name does not meet validation criteria [(DDDS-20)](https://dat.jeppesen.com/jira/browse/DDDS-20)
 
 Specific validation criteria can be found in the links above. Preliminarily built separatedly (with `pre-push-tf` and `pre-push-naming`). Naming checks done before Terraform checks.
+
+**TODO:**  
+| `pre-commit` | - Run `terraform fmt` on staged files and Auto-add and commit or fail |  
+| `pre-push`   | - Run `terraform validate` to prevent broken infra from being pushed     |
+
 
 ## Pre-commit-message Hook
 

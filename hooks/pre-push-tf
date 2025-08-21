@@ -1,88 +1,114 @@
-#!/bin/sh
-
-# Ticket DDDS-18: Terraform fmt
-# Ticket DDDS-19: Terraform validate
+#!/usr/bin/env bash
 
 # Colors for messages
 RED=$'\033[0;31m'
 GREEN=$'\033[0;32m'
 ORANGE=$'\033[0;33m'
 NOCOLOR=$'\033[0m'
+BOLD=$'\033[1m'
 
-# Check if /terraform directory exists
-if [ ! -d "terraform" ]; then
-  echo "${RED}Directory 'terraform' not found. Aborting push."
-  exit 1
+# Require Bash 4.0+ for associative arrays
+if ((BASH_VERSINFO[0] < 4)); then
+  echo "${RED}${BOLD}This hook requires Bash 4.0 or newer. Found: $BASH_VERSION. ${NOCOLOR}Continuing without hook."
+  exit 0
 fi
 
-terraform_files_changed=0  # Initialize flag
+declare -A dir_files_map
+declare -A dir_validate_status
 
-# Read refs from stdin
-while read local_ref local_sha remote_ref remote_sha
-do
-  # Determine diff range
+# Check if there are any terraform files staged in the diff range
+# Read refs from stdin to determine diff_range
+while read -r local_ref local_sha remote_ref remote_sha; do
   if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
-    # New branch or new ref — use the parent of local commit
     if git rev-parse "${local_sha}^" >/dev/null 2>&1; then
       diff_range="${local_sha}^..${local_sha}"
     else
-      # Root/first commit — diff against empty tree hash
       diff_range=$(git hash-object -t tree /dev/null)..${local_sha}
     fi
-  else 
-    # else diff is the difference between commited (local) and remote
+  else
     diff_range="$remote_sha..$local_sha"
   fi
-
-  # Get list of changed .tf files under terraform/
-  changed_files=$(git diff --name-only "$diff_range" -- 'terraform/*.tf')
-
-  if [ -z "$changed_files" ]; then
-    # No terraform files changed, continue to next ref or allow push
-    echo "${GREEN}No terraform files changed. Skipping formatting check..."
-    continue
-  fi
-  
-  terraform_files_changed=1  # Mark that terraform files changed
-
-  # Check formatting on each changed file
-  for file in $changed_files; do
-    echo "${ORANGE}Running terraform fmt on: $file"
-    terraform fmt "$file"
-    git add "$file"
-  done
 done
 
-# Ticket DDDS-19: Terraform validate
+# Get list of changed .tf files in the diff range
+changed_tf_files=$(git diff --name-only "$diff_range" -- '*.tf' || true)
 
-# If terraform files changed, run terraform validate
-if [ "$terraform_files_changed" -eq 1 ]; then
-  cd terraform || {
-    echo "${RED}Failed to enter terraform directory."
-    exit 1
-  }
-  # Initialize terraform (no backend)
-  terraform init -backend=false -input=false >/dev/null 2>&1
-
-  if ! terraform validate; then
-    echo "${RED}Terraform validation failed. Please fix errors before pushing."
-    exit 1
-  fi
-  cd - >/dev/null || exit 1
-
-  # If formatting changes were staged, amend the commit
-  if ! git diff --cached --quiet -- 'terraform/*.tf'; then
-    echo "${ORANGE}Amending commit to include formatting changes..."
-    git commit --amend --no-edit >/dev/null
-  fi
-
-  # Final check: if diffs still exist (unstaged formatting changes), block push
-  if ! git diff --quiet -- 'terraform/*.tf'; then
-    echo "${RED}Uncommitted formatting changes remain. Please review and commit before pushing."
-    exit 1
-  fi
+if [ -z "$changed_tf_files" ]; then
+  echo "${GREEN}No terraform (.tf) files changed. Skipping terraform checks.${NOCOLOR}"
+  exit 0
 fi
 
-# All checks passed or no terraform files changed
-echo "${GREEN}Terraform formatting and validation checks passed."
-exit 0
+# Group changed files by directory
+while IFS= read -r file; do
+  dir=$(dirname "$file")
+  if [[ -z "${dir_files_map[$dir]:-}" ]]; then
+    dir_files_map[$dir]="$file"
+  else
+    dir_files_map[$dir]+=" $file"
+  fi
+done <<< "$changed_tf_files"
+
+overall_exit_code=0
+
+# Iterate through each directory with changes
+for dir in "${!dir_files_map[@]}"; do
+  echo "${ORANGE}Processing directory: $dir${NOCOLOR}"
+
+  # Run terraform fmt on each file
+  for tf_file in ${dir_files_map[$dir]}; do
+    echo "  Running terraform fmt on $tf_file"
+    terraform fmt -write=true "$tf_file"
+    git add "$tf_file"
+  done
+
+  # cd into the directory for init & validate
+  if ! cd "$dir"; then
+    echo "${RED}Failed to enter directory: $dir. Skipping validation.${NOCOLOR}"
+    dir_validate_status[$dir]="SKIPPED: could not enter directory"
+    overall_exit_code=1
+    continue
+  fi
+
+  # Initialize terraform (no backend)
+  terraform init -backend=false -input=false >/dev/null 2>&1 || {
+    echo "${RED}terraform init failed in $dir${NOCOLOR}"
+    dir_validate_status[$dir]="FAIL: terraform init failed"
+    overall_exit_code=1
+    cd - >/dev/null
+    continue
+  }
+
+  # Run terraform validate
+  if terraform validate >/dev/null 2>&1; then
+    echo "${GREEN}Terraform validation succeeded in $dir${NOCOLOR}"
+    dir_validate_status[$dir]="PASS"
+  else
+    echo "${RED}Terraform validation failed in $dir${NOCOLOR}"
+    dir_validate_status[$dir]="FAIL: terraform validation failed"
+    overall_exit_code=1
+  fi
+
+  cd - >/dev/null || exit 1
+done
+
+# Amend commit if any formatting changes staged
+if ! git diff --cached --quiet -- '*.tf'; then
+  echo "${ORANGE}Amending commit to include terraform formatting changes...${NOCOLOR}"
+  git commit --amend --no-edit >/dev/null
+fi
+
+# Final check for unstaged formatting changes
+if ! git diff --quiet -- '*.tf'; then
+  echo "${RED}Uncommitted formatting changes remain. Please review and commit before pushing.${NOCOLOR}"
+  overall_exit_code=1
+fi
+
+# Summary
+echo
+echo "Terraform validation summary:"
+for d in "${!dir_validate_status[@]}"; do
+  status=${dir_validate_status[$d]}
+  echo "  - $d : $status"
+done
+
+exit $overall_exit_code

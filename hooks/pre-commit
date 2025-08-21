@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+ORANGE=$'\033[0;33m'
+NOCOLOR=$'\033[0m'
+
+# Only run if there are staged .tf files
+staged_tf_files=$(git diff --cached --name-only --diff-filter=ACM | grep '\.tf$' || true)
+if [ -z "$staged_tf_files" ]; then
+  echo "${GREEN}No staged Terraform files to format. Skipping."
+  exit 0
+fi
+
+# Run terraform fmt on each staged .tf file and re-stage if changes made
+fmt_failed=0
+for file in $staged_tf_files; do
+  echo "${ORANGE}Running terraform fmt on: $file"
+  terraform fmt "$file" || fmt_failed=1
+done
+
+if [ $fmt_failed -ne 0 ]; then
+  echo "${RED}Terraform fmt failed on one or more files. Please fix before committing."
+  exit 1
+fi
+
+# Re-stage files after formatting
+git add $staged_tf_files
+
+echo "${GREEN}Terraform formatting passed and changes staged."
+
+exit 0

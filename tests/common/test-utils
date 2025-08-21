@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+# Get absolute path to the root of the project repo
+PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+
+# Fall back to parent directory if not in a Git repo (for CI/local testing edge cases)
+if [ -z "$PROJECT_ROOT" ]; then
+  PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+fi
+
+# Create a temp local repo
+create_temp_git_repo() {
+  TMP_DIR=$(mktemp -d)
+  cd "$TMP_DIR" || exit 1
+  git init -b main > /dev/null
+  echo "$TMP_DIR"
+}
+
+# Install hook on temp repo
+install_hook() {
+  local HOOK_NAME="$1"
+  cp "$PROJECT_ROOT/hooks/$HOOK_NAME" ".git/hooks/$HOOK_NAME"
+  chmod +x ".git/hooks/$HOOK_NAME"
+}
+
+# Copy scenario data into temp dir
+copy_test_data() {
+  local scenario="$1"
+  local test_script_path="$2"
+  local test_dir
+  test_dir="$(cd "$(dirname "$test_script_path")" && pwd)"
+
+  rm -rf terraform
+  mkdir -p terraform
+  cp -r "$test_dir/test-data/$scenario/"* terraform/
+}

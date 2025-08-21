@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+set -euo pipefail 
+
+# Colors for messages
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+NOCOLOR=$'\033[0m'
+
+# Import utility functions
+source "$(dirname "${BASH_SOURCE[0]}")/../common/test-utils"
+
+copy_test_data() {
+  local scenario=$1
+  rm -rf terraform
+  mkdir -p terraform
+  cp -r "$PROJECT_ROOT/tests/test-pre-push-tf/test-data/$scenario/"* terraform/
+}
+
+run_hook() {
+  .git/hooks/pre-push-tf
+}
+
+main() {
+  echo "Starting test-pre-push-tf..."
+
+  TMP_REPO=$(create_temp_git_repo)
+  cd "$TMP_REPO" || exit 1
+
+  install_hook "pre-push-tf"
+
+  # 1) Test valid terraform files: expect success
+  echo "Test: Valid terraform files (should pass)"
+  copy_test_data valid "${BASH_SOURCE[0]}"
+  git add terraform
+  git commit -m "Add valid terraform files"
+  if run_hook; then
+    echo "${GREEN}PASS: Valid terraform files${NOCOLOR}"
+  else
+    echo "${RED}FAIL: Valid terraform files${NOCOLOR}"
+    exit 1
+  fi
+
+  # 2) Test terraform files with bad formatting (should amend commit)
+  echo "Test: Terraform files with formatting issues (should fix and amend commit)"
+  copy_test_data invalid-format
+  git add terraform
+  git commit -m "Add badly formatted terraform files"
+  
+  # Modify file to simulate change needing formatting
+  echo "# Add comment to break formatting" >> terraform/main.tf
+  git add terraform/main.tf
+  
+  # Run hook (should fix formatting and amend commit)
+  if run_hook; then
+    echo "${GREEN}PASS: Formatting issues fixed and commit amended${NOCOLOR}"
+  else
+    echo "${RED}FAIL: Formatting issues${NOCOLOR}"
+    exit 1
+  fi
+
+  # 3) Test terraform files with invalid config (should fail)
+  echo "Test: Terraform files with invalid configuration (should fail validation)"
+  copy_test_data invalid-validate
+  git add terraform
+  git commit -m "Add invalid terraform files"
+
+  set +e
+  if run_hook; then
+    echo "${RED}FAIL: Invalid terraform config should block push${NOCOLOR}"
+    exit 1
+  else
+    echo "${GREEN}PASS: Invalid terraform config blocked push${NOCOLOR}"
+  fi
+  set -e
+
+  echo "All tests completed."
+}
+
+main "$@"
