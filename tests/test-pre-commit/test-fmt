@@ -9,87 +9,78 @@ NOCOLOR=$'\033[0m'
 # Import utility functions
 source "$(dirname "${BASH_SOURCE[0]}")/../common/test-utils"
 
-main() {
-  echo "Starting test-pre-commit..."
+echo "Starting test-pre-commit..."
 
-  TEST_SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]}")"
+TEST_SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]}")"
 
-  TMP_REPO=$(create_temp_git_repo)
-  cd "$TMP_REPO" || exit 1
+TMP_REPO=$(create_temp_git_repo)
+cd "$TMP_REPO" || exit 1
 
-  install_hook "pre-commit"
+install_hook "pre-commit"
 
-  # 1) Test valid terraform files (should pass)
-  echo "Test: Valid terraform files (should pass)"
-  copy_test_data valid "$TEST_SCRIPT_PATH"
-  git add terraform
-  if git commit -m "Add valid terraform files"; then
-    echo "${GREEN}PASS: Valid terraform files${NOCOLOR}"
-  else
-    echo "${RED}FAIL: Valid terraform files${NOCOLOR}"
-    exit 1
-  fi
-  reset_git
-  
-  # 2) Test terraform files with bad formatting (should pass, amends commit)
-  echo "Test: Terraform files with formatting issues (should fix and amend commit)"
-  copy_test_data invalid-format "$TEST_SCRIPT_PATH"
-  git add terraform
-  if git commit -m "Add badly formatted terraform files"; then
-    echo "${GREEN}PASS: Formatting issues fixed and commit amended${NOCOLOR}"
-  else
-    echo "${RED}FAIL: Formatting issues${NOCOLOR}"
-    exit 1
-  fi
-  reset_git
+echo "Test 1: Valid terraform files (should pass)"
+copy_test_data valid "$TEST_SCRIPT_PATH"
+git add terraform
+if git commit -m "Add valid terraform files"; then
+  echo "${GREEN}PASS: Valid terraform files${NOCOLOR}"
+else
+  echo "${RED}FAIL: Valid terraform files${NOCOLOR}"
+  exit 1
+fi
+reset_git
 
-  # 3) Test terraform files with invalid config (should fail)
-  echo "Test: Terraform files with unfixable invalid formatting"
-  copy_test_data invalid-unfixable "$TEST_SCRIPT_PATH"
-  git add terraform
+echo "Test 2: Terraform files with formatting issues (should fix and amend commit)"
+copy_test_data invalid-format "$TEST_SCRIPT_PATH"
+git add terraform
+if git commit -m "Add badly formatted terraform files"; then
+  echo "${GREEN}PASS: Formatting issues fixed and commit amended${NOCOLOR}"
+else
+  echo "${RED}FAIL: Formatting issues${NOCOLOR}"
+  exit 1
+fi
+reset_git
 
-  # Temporarily disable exit flag to catch failure
-  set +e 
-  if git commit -m "Add unfixable terraform files"; then 
-    echo "${RED}FAIL: Unfixable invalid terraform config should block commit${NOCOLOR}"
-    exit 1
-  else
-    echo "${GREEN}PASS: Unfixable invalid terraform config blocked commit${NOCOLOR}"
-  fi
-  set -e
-  reset_git
+echo "Test 3: Terraform files with unfixable invalid formatting"
+copy_test_data invalid-unfixable "$TEST_SCRIPT_PATH"
+git add terraform
 
-  # 4) Test changes not on terraform files (should pass, skips formatting)
-  echo "Test: No terraform files altered"
-  copy_test_data non-tf "$TEST_SCRIPT_PATH" documentation
-  git add documentation
-  if git commit -m "Add readme files"; then
-    echo "${GREEN}PASS: Non-terraform files ignored.${NOCOLOR}"
-  else
-    echo "${RED}FAIL: Hook should not fail on non-terraform files.${NOCOLOR}"
-    exit 1
-  fi
-  reset_git
+# Temporarily disable exit flag to catch failure
+set +e 
+if git commit -m "Add unfixable terraform files"; then 
+  echo "${RED}FAIL: Unfixable invalid terraform config should block commit${NOCOLOR}"
+  exit 1
+else
+  echo "${GREEN}PASS: Unfixable invalid terraform config blocked commit${NOCOLOR}"
+fi
+set -e
+reset_git
 
-  # 5) Deleted terraform file (should pass, skip formatting)
-  echo "Test: Deleted terraform file (should skip)"
-  copy_test_data deleted "$TEST_SCRIPT_PATH"
+echo "Test 4: No terraform files altered"
+copy_test_data non-tf "$TEST_SCRIPT_PATH" documentation
+git add documentation
+if git commit -m "Add readme files"; then
+  echo "${GREEN}PASS: Non-terraform files ignored.${NOCOLOR}"
+else
+  echo "${RED}FAIL: Hook should not fail on non-terraform files.${NOCOLOR}"
+  exit 1
+fi
+reset_git
 
-  # Setup repo to have terraform file already committed before removing
-  git add terraform
-  git commit -m "Add file to delete"
-  git rm terraform/main.tf
-  if git commit -m "Delete terraform file"; then
-    echo "${GREEN}PASS: Deleted terraform file ignored.${NOCOLOR}"
-  else
-    echo "${RED}FAIL: Hook should not fail when .tf files are deleted.${NOCOLOR}"
-    exit 1
-  fi
+echo "Test 5: Deleted terraform file (should skip)"
+copy_test_data deleted "$TEST_SCRIPT_PATH"
 
-  # Clean temp repo
-  trap "rm -rf $TMP_REPO" EXIT
+# Setup repo to have terraform file already committed before removing
+git add terraform
+git commit -m "Add file to delete"
+git rm terraform/main.tf
+if git commit -m "Delete terraform file"; then
+  echo "${GREEN}PASS: Deleted terraform file ignored.${NOCOLOR}"
+else
+  echo "${RED}FAIL: Hook should not fail when .tf files are deleted.${NOCOLOR}"
+  exit 1
+fi
 
-  echo "All tests completed."
-}
+# Clean temp repo
+trap "rm -rf $TMP_REPO" EXIT
 
-main "$@"
+echo "All tests completed."

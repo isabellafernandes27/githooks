@@ -3,7 +3,6 @@
 # Colors for messages
 RED=$'\033[0;31m'
 GREEN=$'\033[0;32m'
-ORANGE=$'\033[0;33m'
 NOCOLOR=$'\033[0m'
 BOLD=$'\033[1m'
 
@@ -14,7 +13,6 @@ if ((BASH_VERSINFO[0] < 4)); then
 fi
 
 declare -A dir_files_map
-declare -A dir_validate_status
 
 # Check if there are any terraform files staged in the diff range
 # Read refs from stdin to determine diff_range
@@ -34,81 +32,53 @@ done
 changed_tf_files=$(git diff --name-only "$diff_range" -- '*.tf' || true)
 
 if [ -z "$changed_tf_files" ]; then
-  echo "${GREEN}No terraform (.tf) files changed. Skipping terraform checks.${NOCOLOR}"
+  echo "${GREEN}No terraform (.tf) files changed. Skipping terraform validation.${NOCOLOR}"
   exit 0
 fi
 
 # Group changed files by directory
 while IFS= read -r file; do
   dir=$(dirname "$file")
-  if [[ -z "${dir_files_map[$dir]:-}" ]]; then
-    dir_files_map[$dir]="$file"
-  else
-    dir_files_map[$dir]+=" $file"
+  # only add directory if it contains .tf files
+  if ls "$dir"/*.tf >/dev/null 2>&1; then
+    if [[ -z "${dir_files_map[$dir]:-}" ]]; then
+      dir_files_map[$dir]="$file"
+    else
+      dir_files_map[$dir]+=" $file"
+    fi
   fi
 done <<< "$changed_tf_files"
 
-overall_exit_code=0
 
 # Iterate through each directory with changes
 for dir in "${!dir_files_map[@]}"; do
-  echo "${ORANGE}Processing directory: $dir${NOCOLOR}"
-
-  # Run terraform fmt on each file
-  for tf_file in ${dir_files_map[$dir]}; do
-    echo "  Running terraform fmt on $tf_file"
-    terraform fmt -write=true "$tf_file"
-    git add "$tf_file"
-  done
 
   # cd into the directory for init & validate
   if ! cd "$dir"; then
     echo "${RED}Failed to enter directory: $dir. Skipping validation.${NOCOLOR}"
-    dir_validate_status[$dir]="SKIPPED: could not enter directory"
-    overall_exit_code=1
-    continue
+    exit 1
   fi
 
   # Initialize terraform (no backend)
   terraform init -backend=false -input=false >/dev/null 2>&1 || {
     echo "${RED}terraform init failed in $dir${NOCOLOR}"
-    dir_validate_status[$dir]="FAIL: terraform init failed"
-    overall_exit_code=1
+    exit 1
     cd - >/dev/null
-    continue
   }
 
   # Run terraform validate
   if terraform validate >/dev/null 2>&1; then
     echo "${GREEN}Terraform validation succeeded in $dir${NOCOLOR}"
-    dir_validate_status[$dir]="PASS"
   else
     echo "${RED}Terraform validation failed in $dir${NOCOLOR}"
-    dir_validate_status[$dir]="FAIL: terraform validation failed"
-    overall_exit_code=1
+    exit 1
   fi
 
   cd - >/dev/null || exit 1
 done
 
-# Amend commit if any formatting changes staged
-if ! git diff --cached --quiet -- '*.tf'; then
-  echo "${ORANGE}Amending commit to include terraform formatting changes...${NOCOLOR}"
-  git commit --amend --no-edit >/dev/null
-fi
-
-# Final check for unstaged formatting changes
-if ! git diff --quiet -- '*.tf'; then
-  echo "${RED}Uncommitted formatting changes remain. Please review and commit before pushing.${NOCOLOR}"
-  overall_exit_code=1
-fi
-
 # Summary
 echo
-echo "Terraform validation summary:"
-for d in "${!dir_validate_status[@]}"; do
-  status=${dir_validate_status[$d]}
-  echo "  - $d : $status"
-done
+echo "Terraform validation ${BOLD}succeeded."
 
-exit $overall_exit_code
+exit 0

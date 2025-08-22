@@ -43,3 +43,15 @@ reset_git() {
   git reset --hard >/dev/null 2>&1
   git clean -fd >/dev/null 2>&1
 }
+
+# Create bare remote + local repo for push testing
+create_temp_git_remote_repo() {
+  local TMP_DIR
+  TMP_DIR=$(mktemp -d)
+  mkdir -p "$TMP_DIR/remote.git"
+  git init --bare "$TMP_DIR/remote.git" > /dev/null
+  git init -b main "$TMP_DIR/repo" > /dev/null
+  cd "$TMP_DIR/repo" || exit 1
+  git remote add origin "$TMP_DIR/remote.git"
+  echo "$TMP_DIR/repo"
+}

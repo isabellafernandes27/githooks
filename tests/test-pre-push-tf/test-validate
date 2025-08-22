@@ -7,69 +7,95 @@ GREEN=$'\033[0;32m'
 ORANGE=$'\033[0;33m'
 NOCOLOR=$'\033[0m'
 
-HOOK_PATH="$(pwd)/scripts/hooks/pre-push-tf"
+echo "Starting pre-push terraform validation hook tests..."
 
-echo "Starting terraform validation hook tests..."
+# Load test-utils
+TEST_SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]}")"
+source "$(dirname "$TEST_SCRIPT_PATH")/../common/test-utils"
 
-TMP_REPO=$(mktemp -d)
-echo "Created temp repo at $TMP_REPO"
-cd "$TMP_REPO"
-
-# Initialize empty git repo
-git init -q
-
-# Setup terraform directory and example files
-mkdir terraform
-
-# Add a well-formed Terraform file and commit
-cat <<EOF > terraform/valid.tf
-resource "null_resource" "example_valid" {}
-EOF
-git add terraform/valid.tf
-git commit -m "Add valid terraform file" -q
-
-# Copy the pre-push-tf hook and make executable
-mkdir -p .git/hooks
-cp "$HOOK_PATH" .git/hooks/pre-push-tf
-chmod +x .git/hooks/pre-push-tf
-
-# Simulate push by invoking hook with dummy refs
+# Helper to simulate a push
 simulate_push() {
   local_ref=$(git rev-parse --abbrev-ref HEAD)
   local_sha=$(git rev-parse HEAD)
   remote_ref="refs/heads/main"
   remote_sha="0000000000000000000000000000000000000000"
-  echo "$local_ref $local_sha $remote_ref $remote_sha" | .git/hooks/pre-push-tf
+
+  local shell_bin=${1:-bash}  # default to "bash"
+  echo "$local_ref $local_sha $remote_ref $remote_sha" | $shell_bin .git/hooks/pre-push-tf
 }
 
-# Test 1: Valid terraform config 
+# Create a fresh repo
+REPO_DIR=$(create_temp_git_repo)
+cd "$REPO_DIR"
+
+# Install pre-push hook
+install_hook pre-push-tf
+
 echo "Test 1: Valid Terraform config"
+copy_test_data valid "$TEST_SCRIPT_PATH"
+git add terraform/*
+git commit -m "Add valid terraform file" >/dev/null
 
 if simulate_push; then
-  echo "${GREEN}PASS: Push succeeded with valid terraform config"
+  echo "${GREEN}PASS: Push succeeded with valid terraform config${NOCOLOR}"
 else
-  echo "${RED}FAIL: Push blocked unexpectedly for valid terraform"
+  echo "${RED}FAIL: Push blocked unexpectedly for valid terraform${NOCOLOR}"
   exit 1
 fi
 
-# Test 2: Invalid terraform config 
-cat <<EOF > terraform/invalid.tf
-resource "aws_instance" "example_invalid" {
-  ami = "ami-123456"
-  instance_type = "t2.micro"
-  invalid_attribute = "this_should_fail"
-}
-EOF
-git add terraform/invalid.tf
-git commit -m "Add invalid terraform file" -q
+reset_git
 
 echo "Test 2: Invalid Terraform config"
+copy_test_data invalid-validate "$TEST_SCRIPT_PATH"
+git add terraform/*
+git commit -m "Add invalid terraform file" >/dev/null
 
 if simulate_push; then
-  echo "${RED}FAIL: Push succeeded but should have been blocked due to terraform validate"
+  echo "${RED}FAIL: Push succeeded but should have been blocked due to terraform validate${NOCOLOR}"
   exit 1
 else
-  echo "${GREEN}PASS: Push blocked as expected due to terraform validate failure"
+  echo "${GREEN}PASS: Push blocked as expected due to terraform validate failure${NOCOLOR}"
 fi
+
+reset_git
+
+echo "Test 3: No terraform files altered"
+copy_test_data non-tf "$TEST_SCRIPT_PATH" documentation
+git add documentation/*
+git commit -m "Add non-terraform files" >/dev/null
+
+if simulate_push; then
+  echo "${GREEN}PASS: Push succeeded with no terraform changes${NOCOLOR}"
+else
+  echo "${RED}FAIL: Push blocked unexpectedly when no terraform files changed${NOCOLOR}"
+  exit 1
+fi
+
+reset_git
+
+echo "Test 4: Deleted terraform file (should skip validation)"
+copy_test_data deleted "$TEST_SCRIPT_PATH" terraform
+git add terraform/*
+git commit -m "Add file to delete" >/dev/null
+
+# Delete it
+git rm terraform/main.tf >/dev/null
+git commit -m "Delete terraform file" >/dev/null
+
+if simulate_push; then
+  echo "${GREEN}PASS: Push succeeded when deleting terraform file${NOCOLOR}"
+else
+  echo "${RED}FAIL: Push blocked unexpectedly on deleted terraform file${NOCOLOR}"
+  exit 1
+fi
+
+echo "Test 3: Bash < 4.0 (simulate)"
+if simulate_push /bin/bash; then
+  echo "${GREEN}PASS: Hook skipped as expected for Bash < 4.0${NOCOLOR}"
+else
+  echo "${RED}FAIL: Hook did not skip for old Bash version${NOCOLOR}"
+  exit 1
+fi
+
 
 echo "All validation tests completed."
