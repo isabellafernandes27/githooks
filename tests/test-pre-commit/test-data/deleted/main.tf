@@ -1,3 +1,4 @@
+# Deleted invalid tf file, should be ignored
 terraform{
 required_version= ">= 0.13"
 }

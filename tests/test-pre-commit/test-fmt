@@ -69,6 +69,22 @@ main() {
     echo "${RED}FAIL: Hook should not fail on non-terraform files.${NOCOLOR}"
     exit 1
   fi
+  reset_git
+
+  # 5) Deleted terraform file (should pass, skip formatting)
+  echo "Test: Deleted terraform file (should skip)"
+  copy_test_data deleted "$TEST_SCRIPT_PATH"
+
+  # Setup repo to have terraform file already committed before removing
+  git add terraform
+  git commit -m "Add file to delete"
+  git rm terraform/main.tf
+  if git commit -m "Delete terraform file"; then
+    echo "${GREEN}PASS: Deleted terraform file ignored.${NOCOLOR}"
+  else
+    echo "${RED}FAIL: Hook should not fail when .tf files are deleted.${NOCOLOR}"
+    exit 1
+  fi
 
   # Clean temp repo
   trap "rm -rf $TMP_REPO" EXIT

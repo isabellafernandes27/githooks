@@ -12,8 +12,9 @@ tests/test-pre-commit/
 ├── test-fmt              # Main test runner script
 ├── test-data/s
 │   ├── valid/            # Valid Terraform files
+|   ├── deleted/          # Terraform files to be deleted
 │   ├── invalid-format/   # Files with bad formatting
-│   ├── invalid-unfixable/ # Unfixable Terraform files
+│   ├── invalid-unfixable/# Unfixable Terraform files
 │   └── non-tf/           # Non-Terraform files
 └── README.md             # This documentation
 ```
@@ -35,6 +36,10 @@ tests/test-pre-commit/
 4. **Non-Terraform files**  
    - Adds documentation files.  
    - Hook detects no `.tf` staged and skips formatting.  
+
+5. **Deleted Terraform files**  
+   - Adds `.tf` files and commits. Deletes that file and commits the change.  
+   - Hook does not detect deleted `.tf` staged and skips formatting.  
 
 
 ## Running the Tests
