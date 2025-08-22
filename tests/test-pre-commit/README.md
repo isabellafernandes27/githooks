@@ -1,22 +1,22 @@
 # Pre-commit Hook Tests
 
 This suite tests the **Terraform formatting pre-commit hook** to ensure it behaves correctly in different scenarios.  
-This is a part of the Digital Data Delivery's team efforts to automate developer workflow. Specific validation criteria found in [DPDS-18](https://dat.jeppesen.com/jira/browse/DPDS-18).
+This is a part of the Digital Data Delivery's team efforts to automate developer workflow. Specific validation criteria found in [DPDS-18](https://dat.jeppesen.com/jira/browse/DPDS-18).  
 Each test spins up a temporary Git repository, installs the hook, and commits test data.
 
 ---
 
 ## Directory Structure
-
-tests/test-pre-commit/   
-├── test-fmt              # Main test runner script     
-├── test-data/            # Scenario specific files     
-│   ├── valid/            # Valid Terraform files    
-│   ├── invalid-format/   # Files with bad formatting   
-│   ├── invalid-unfixable/# Unfixable Terraform files   
-│   └── non-tf/           # Non-Terraform files     
-└── README.md             # This documentation  
-
+```
+tests/test-pre-commit/
+├── test-fmt              # Main test runner script
+├── test-data/s
+│   ├── valid/            # Valid Terraform files
+│   ├── invalid-format/   # Files with bad formatting
+│   ├── invalid-unfixable/ # Unfixable Terraform files
+│   └── non-tf/           # Non-Terraform files
+└── README.md             # This documentation
+```
 
 ## Tests
 
