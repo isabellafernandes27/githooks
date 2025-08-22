@@ -23,14 +23,23 @@ install_hook() {
   chmod +x ".git/hooks/$HOOK_NAME"
 }
 
-# Copy scenario data into temp dir
+# Copy scenario data into target dir (default: terraform/)
 copy_test_data() {
   local scenario="$1"
   local test_script_path="$2"
+  local target_dir="${3:-terraform}"
+
+  # Get absolute path to test-data dir next to the test script
   local test_dir
   test_dir="$(cd "$(dirname "$test_script_path")" && pwd)"
 
-  rm -rf terraform
-  mkdir -p terraform
-  cp -r "$test_dir/test-data/$scenario/"* terraform/
+  rm -rf "$target_dir"
+  mkdir -p "$target_dir"
+  cp -r "$test_dir/test-data/$scenario/"* "$target_dir"/
+}
+
+# Reset git index and working dir (optional dir arg to just unstage)
+reset_git() {
+  git reset --hard >/dev/null 2>&1
+  git clean -fd >/dev/null 2>&1
 }

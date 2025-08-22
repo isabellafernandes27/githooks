@@ -13,21 +13,18 @@ if [ -z "$staged_tf_files" ]; then
   exit 0
 fi
 
-# Run terraform fmt on each staged .tf file and re-stage if changes made
-fmt_failed=0
+# Run terraform fmt on each staged .tf file and exit immediately if it fails
 for file in $staged_tf_files; do
-  echo "${ORANGE}Running terraform fmt on: $file"
-  terraform fmt "$file" || fmt_failed=1
+  echo "${ORANGE}Running terraform fmt on: $file${NOCOLOR}"
+  if ! terraform fmt "$file"; then
+    echo "${RED}terraform fmt failed on file: $file${NOCOLOR}"
+    exit 1
+  fi
 done
-
-if [ $fmt_failed -ne 0 ]; then
-  echo "${RED}Terraform fmt failed on one or more files. Please fix before committing."
-  exit 1
-fi
 
 # Re-stage files after formatting
 git add $staged_tf_files
 
-echo "${GREEN}Terraform formatting passed and changes staged."
+echo "${GREEN}Terraform formatting passed and changes staged.${NOCOLOR}"
 
 exit 0
