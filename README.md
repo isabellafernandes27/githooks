@@ -1,5 +1,5 @@
 # Githooks
-As per Epic [DDDS-11](https://dat.jeppesen.com/jira/browse/DDDS-11), this aims to set up some githooks to help dev workflow.
+As per Epic [DPDS-11](https://dat.jeppesen.com/jira/browse/DPDS-11), this aims to set up some githooks to help dev workflow.
 
 Sample Java project with sample Terraform files were built just to mimic initial work. 
 
@@ -127,15 +127,15 @@ chmod +x tests/test-pre-push/test-validate-naming
 
 This hook attempts to address the following needs:
 
-- ensure `terraform validate` can be run without errors if files inside /terraform/ were modified [(DDDS-19)](https://dat.jeppesen.com/jira/browse/DDDS-19)
-- ensure push is denied if message if branch name does not meet validation criteria [(DDDS-20)](https://dat.jeppesen.com/jira/browse/DDDS-20)
+- ensure `terraform validate` can be run without errors if files inside /terraform/ were modified [(DPDS-19)](https://dat.jeppesen.com/jira/browse/DPDS-19)
+- ensure push is denied if message if branch name does not meet validation criteria [(DPDS-20)](https://dat.jeppesen.com/jira/browse/DPDS-20)
 
 Specific validation criteria can be found in the links above. Preliminarily built separatedly (with `pre-push-tf` and `pre-push-naming`). Naming checks done before Terraform checks.
 
 ## Pre-commit-message Hook
 
 This hook attempts to address the following need:
-- Pre-pen ticket number/branch name into message [(DDDS-17)](https://dat.jeppesen.com/jira/browse/DDDS-17)
+- Pre-pen ticket number/branch name into message [(DPDS-17)](https://dat.jeppesen.com/jira/browse/DPDS-17)
 
 Specific validation criteria can be found in the link above.
 
@@ -155,7 +155,7 @@ The git message should be built as follows:
 
 This hook attempts to address the following needs:
 
-- ensure `terraform fmt` can be run without errors if files inside /terraform/ were modified [(DDDS-18)](https://dat.jeppesen.com/jira/browse/DDDS-18)
+- ensure `terraform fmt` can be run without errors if files inside /terraform/ were modified [(DPDS-18)](https://dat.jeppesen.com/jira/browse/DPDS-18)
 
 Specific validation criteria can be found in the link above.
 
