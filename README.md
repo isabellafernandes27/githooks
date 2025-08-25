@@ -7,71 +7,130 @@ Hooks are available under scripts/hooks. They need to be shared for each teammem
 
 Skip hooks by using either `-n` or `--no-verify` when running `git`.
 
-These scripts were made to run on Bash >=4.0. Installation instructions are available on section **TBD**.
+These scripts were made to run on Bash >=4.0. Installation instructions are available on section **TBD (only pre-push needs to be 4.0)**.
 
 ## Table Of Contents
  - [Todos](#todos)
+ - [Requirements](#requirements)
+ - [Installation](#installation)
+ - [Quick Setup](#quick-setup)
  - [Pre-push Hook](#pre-push-hook)
  - [Pre-commit-message Hook](#pre-commit-message-hook)
+ - [Pre-commit Hook](#pre-commit-hook)
  - [Testing suite](#testing-suite)  
-    - [test-pre-push-tf-fmt](#test-pre-push-tf-fmt)
-    - [test-pre-push-tf-validate](#test-pre-push-tf-validate)
-    - [test-pre-push-naming](#test-pre-push-naming)
-    - [test-prepare-commit-msg](#test-prepare-commit-msg)
-    - [test-pre-push](#test-pre-push)
 
 ## TODOs
 
 - [x] change pre-push tf fmt to move on if `/terraform/` dir not found
 - [ ] look into git hooks repo for use with gradle build enforcement
-- [ ] look into stylesheet ticket
-- [ ] terraform will have a lot of folders/modules... adapt script to that and make testing more robust to ensure no hiccups
+- [X] look into stylesheet ticket
+- [X] terraform will have a lot of folders/modules... adapt script to that and make testing more robust to ensure no hiccups
 - [ ] more robust testing for pre-push-naming, pre-push, and prepare-commit-msg
 - [ ] research how to automatically checkout hooks repo for enforcing implementation(may need to look into relative pathing)
-- [ ] Readme.md clean up and split, individual testing readmes
-- [ ] Installer with bash updates and usage
-- [ ] add something that stops hooks if shell under 4.0
-
-## Installation and Running the Project
-
-**todo**
+- [X] Readme.md clean up and split, individual testing readmes
+- [X] Installer with bash updates and usage
+- [X] add something that stops hooks if shell under 4.0
+- [ ] change emails in Readme Notes to match Jepp emails
 
 ## Requirements
 
-- Bash 4.0 or newer is required to run the Git hook scripts and tests.
-    - ✅ Most Linux distros already ship Bash 4+
-    - ⚠️ macOS ships with Bash 3.2 by default — please install Bash via Homebrew:
-    
-    ```bash
-    brew install bash
-    ```
+To run these tests, you’ll need the following:
 
-    - To make sure you're using the right version:
-    
-    ```bash
-    bash --version
-    ```
+1. **Git**
+   - Version: `git ≥ 2.20`
+   - Needed for `git init`, `git checkout -b`, `git rev-parse`, etc.
 
-    - You can run a script with the Homebrew-installed Bash directly:
+2. **Bash**
+   - Version: `bash ≥ 4.0`
+   - The hook uses regex matching (`=~`) and `BASH_REMATCH`, which are not supported in Bash 3.x.  
+   - **macOS note**: older macOS ships with Bash 3.2. Install Bash 4+ via [Homebrew](https://brew.sh/):
+     ```bash
+     brew install bash
+     chsh -s /usr/local/bin/bash
+     ```
 
-    ```bash
-    /opt/homebrew/bin/bash ./scripts/hooks/pre-push
-    ```
+3. **POSIX utilities**
+   - Required: `mktemp`, `rm`, `cp`, `cd`, `cat`, `echo`, `sed`, `grep`  
+   - These are included by default on Linux and macOS.  
+   - On Windows, they come with **Git Bash**.
+
+4. **Cross-platform support**
+   - **Linux**: Works out of the box.  
+   - **macOS**: Works if Bash ≥ 4.0 is installed.  
+   - **Windows**: Requires **Git Bash** or **WSL**. (Native CMD/PowerShell not supported.)
+
+5. **Optional Environment Variables**
+   - `HOOK_DEBUG=1` → enables verbose debug logging during test runs.  
+   - `HOOK_FORCE=1` → bypasses branch validation checks (for local testing only).
+
+6. **Terraform**
+   - Terraform CLI must be installed and available in your `PATH`.  
+   - Verify with:
+     ```bash
+     terraform -version
+     ```
+
+## Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repo-url>
+   cd githooks
+   ```
+
+2. **Install dependencies**
+
+   - **macOS**
+     ```bash
+     brew install bash git terraform
+     ```
+
+   - **Linux (Debian/Ubuntu)**
+     ```bash
+     sudo apt update
+     sudo apt install git bash terraform
+     ```
+
+   - **Windows**
+     - Install [Git for Windows](https://git-scm.com/download/win) (includes Git Bash).
+     - Install [Terraform](https://developer.hashicorp.com/terraform/downloads).
+     - Ensure both `git` and `terraform` are available in your `PATH`.
+
+4. **Verify installation**
+   ```bash
+   git --version
+   bash --version
+   terraform -version
+   ```
+   You should see versions listed without errors.
+
+## Quick Setup
+
+Clone repo and run:
+
+```bash
+# Make hooks + test runners executable
+chmod +x hooks/prepare-commit-msg
+chmod +x hooks/pre-push-naming
+chmod +x hooks/pre-push-tf
+chmod +x hooks/pre-commit
+chmod +x hooks/pre-push
+
+chmod +x tests/test-prepare-commit-msg/test-message
+chmod +x tests/test-pre-push-naming/test-naming
+chmod +x tests/test-pre-push-tf/test-validate
+chmod +x tests/test-pre-commit/test-fmt
+chmod +x tests/test-pre-push/test-validate-naming
+```
 
 ## Pre-push Hook
 
 This hook attempts to address the following needs:
 
-- ensure `terraform fmt` can be run without errors if files inside /terraform/ were modified [(DDDS-18)](https://dat.jeppesen.com/jira/browse/DDDS-18)
 - ensure `terraform validate` can be run without errors if files inside /terraform/ were modified [(DDDS-19)](https://dat.jeppesen.com/jira/browse/DDDS-19)
 - ensure push is denied if message if branch name does not meet validation criteria [(DDDS-20)](https://dat.jeppesen.com/jira/browse/DDDS-20)
 
 Specific validation criteria can be found in the links above. Preliminarily built separatedly (with `pre-push-tf` and `pre-push-naming`). Naming checks done before Terraform checks.
-
-**TODO:**  
-| `pre-commit` | - Run `terraform fmt` on staged files and Auto-add and commit or fail |  
-| `pre-push`   | - Run `terraform validate` to prevent broken infra from being pushed     |
-
 
 ## Pre-commit-message Hook
 
@@ -92,111 +151,25 @@ The git message should be built as follows:
 >    Include at least one empty line before it. Format:  
 >    Co-authored-by: name <user@users.noreply.github.com>  
 
+## Pre-commit Hook
+
+This hook attempts to address the following needs:
+
+- ensure `terraform fmt` can be run without errors if files inside /terraform/ were modified [(DDDS-18)](https://dat.jeppesen.com/jira/browse/DDDS-18)
+
+Specific validation criteria can be found in the link above.
 
 ## Testing Suite
 
-Assumes your pre-push hook is located at `scripts/hooks/pre-push`, AND you have terraform installed and available in your `PATH`, AND the test script is run on macOS or Linux with `bash/sh`.
+This repository includes a suite of automated tests for all Git hooks.  
+Each test runs in an isolated temporary Git repository to avoid cross-contamination.  
 
-Testing suite was made with the detailed given-when-then validation criteria from each ticket mentioned above.
+Available test suites:  
 
-Before running these make sure the scripts are executable by running the below commands:
+- **test-pre-commit** → validates the pre-commit terraform formatting hook  
+- **test-prepare-commit-msg** → validates automatic ticket prefixing in commit messages  
+- **test-pre-push** → validates pre-push behavior as a whole  
+- **test-pre-push-naming** → validates branch naming conventions  
+- **test-pre-push-tf** → validates Terraform-validation pre-push check  
 
-```bash
-chmod +x scripts/hooks/pre-push-naming
-chmod +x scripts/hooks/pre-push-tf
-chmod +x scripts/hooks/pre-push
-chmod +x scripts/hooks/prepare-commit-msg
-```
-
-### test-pre-push-tf-fmt
-
-- Creates a temporary Git repo.
-- Copies the pre-push-tf hook into `.git/hooks/.`
-- Creates and commits files under `/terraform/` and outside `/terraform/.`
-- Modifies files to simulate the three scenarios:
-    1. Modified `/terraform/` files with formatting issues that terraform fmt can fix automatically.
-    2. Modified files outside `/terraform/.`
-    3. Modified `/terraform/` files with formatting issues that terraform fmt cannot fix automatically (simulated by making a file that terraform fmt won't fix). 
-- Attempts to push (simulates by invoking the hook directly).
-- Checks the hook behavior matches the validation criteria.
-
-#### Running it:
-Make sure you run these in the root dir:
-1. Run `chmod +x scripts/hooks/tests/test-pre-push-tf-fmt` to make file executable
-2. Run `./scripts/hooks/tests/test-pre-push-tf-fmt` to run tests
-3. Test conclusions should display in terminal
-
-### test-pre-push-tf-validate
-
-- Creates a temporary Git repo.
-- Copies the pre-push-tf hook into `.git/hooks/.`
-- Creates and commits files under `/terraform/` and outside `/terraform/.`
-- Modifies files to simulate the two scenarios:
-    1. Valid.tf file
-    2. Invalid .tf file 
-- Attempts to push (simulates by invoking the hook directly).
-- Checks the hook behavior matches the validation criteria.
-
-#### Running it:
-Make sure you run these in the root dir:
-1. Run `chmod +x scripts/hooks/tests/test-pre-push-tf-validate` to make file executable
-2. Run `./scripts/hooks/tests/test-pre-push-tf-validate` to run tests
-3. Test conclusions should display in terminal
-
-### test-pre-push-naming
-
-- Creates a temporary Git repo.
-- Copies the pre-push-naming hook into `.git/hooks/.`
-- Defines protected branches (`master`, `production`, and `staging`)
-- Defines and checks out different branches to see if `push` will be allowed:
-    1. Pushing from a protected branch like `main`, `master`, `production`.
-    2. Valid branch examples:
-        - `feature/IDDS-1234`
-        - `hotfix/IDDS-4567-suffix`
-        - `IDDS-7890`
-    3. Invalid branch examples:
-        - `dev/idds-0001` (lowercase prefix)
-        - `feature/IDDS-abc` (non-numeric)
-        - `idds-5678` (lowercase Jira ID)
-
-#### Running it:
-Make sure you run these in the root dir:
-1. Run `chmod +x scripts/hooks/tests/test-pre-push-naming` to make file executable
-2. Run `./scripts/hooks/tests/test-pre-push-naming` to run tests
-3. Test conclusions should display in terminal
-
-### test-prepare-commit-msg
-
-- Creates a temporary Git repo.
-- Copies the prepare-commit-msg hook into `.git/hooks/.`
-- Runs multiple tests by creating branches with and without Jira ticket IDs and making commits:
-    1. Message without ticket number 
-        - branch: "DDDS-123-add-login", initial message: "Implement login handler", final message: "DDDS-123: Implement login handler"
-    2. Message with ticket number
-        - branch: "DDDS-321-existing", initial message: "DDDS-321: Fix bug", final message: "DDDS-321: Fix bug"
-    3. Message and branch with no ticket pattern (leaves it unchanged).
-- Checks whether the commit message is automatically updated to start with `<TICKET-ID>: <message>`
-
-#### Running it:
-Make sure you run these in the root dir:
-1. Run `chmod +x scripts/hooks/tests/test-prepare-commit-msg` to make file executable
-2. Run `.scripts/hooks/tests/test-prepare-commit-msg` to run tests
-3. Test conclusions should display in terminal
-
-### test-pre-push
-
-- Creates a temporary Git repo.
-- Copies the pre-push hook into `.git/hooks/.`
-- Runs multiple tests combining branch naming and terraform file checks:
-    1. Valid branch name and valid terraform (base test, expects success).
-    2. Invalid branch name and valid terraform (expects to be blocked).
-    3. Valid branch name and invalid terraform (expects to be blocked).
-    4. Protected branch name (expects to be blocked).
-    5. Valid branch name and no terraform changes (expects success, should skip formatting).
-- Checks wether push succeeds or fails as expected
-
-#### Running it:
-Make sure you run these in the root dir:
-1. Run `chmod +x scripts/hooks/tests/test-pre-push` to make file executable
-2. Run `.scripts/hooks/tests/test-pre-push` to run tests
-3. Test conclusions should display in terminal
+Each test folder contains its own **README.md** with detailed setup, scenarios, and validation criteria.  
