@@ -1,7 +1,9 @@
 # Pre-push-naming Hook Tests
+
 This suite tests the **pre-push-naming hook** to ensure it behaves correctly in different scenarios.  
 This is a part of the Digital Data Delivery's team efforts to automate developer workflow. Specific validation criteria found in [DPDS-20](https://dat.jeppesen.com/jira/browse/DPDS-20).  
 Each test spins up a temporary Git repository, installs the hook, and simulates a push to a remote branch with names specified in `test-data/test-branch-names.txt`.
+
 ---
 
 ## Directory Structure
