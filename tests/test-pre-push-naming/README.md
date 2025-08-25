@@ -8,10 +8,10 @@ Each test spins up a temporary Git repository, installs the hook, and simulates 
 ## Directory Structure
 ```
 tests/test-pre-push-naming/
-├── test-naming              # Main test runner script
+├── test-naming                 # Main test runner script
 ├── test-data/
 │   └── test-branch-names.txt   # Branch name scenarios + expected outcomes    
-└── README.md             # This documentation
+└── README.md                   # This documentation
 ```
 
 ## Tests
