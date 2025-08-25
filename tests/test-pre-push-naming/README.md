@@ -7,21 +7,16 @@ Each test spins up a temporary Git repository, installs the hook, and simulates 
 
 ## Directory Structure
 ```
-tests/test-pre-commit/
-├── test-fmt              # Main test runner script
-├── test-data/s
-│   ├── valid/            # Valid Terraform files
-|   ├── deleted/          # Terraform files to be deleted
-│   ├── invalid-format/   # Files with bad formatting
-│   ├── invalid-unfixable/# Unfixable Terraform files
-│   └── non-tf/           # Non-Terraform files
+tests/test-pre-push-naming/
+├── test-naming              # Main test runner script
+├── test-data/
+│   └── test-branch-names.txt   # Branch name scenarios + expected outcomes    
 └── README.md             # This documentation
 ```
 
 ## Tests
 
 **Branch validation** follows this regex: "(^(feature|hotfix|bugfix|library|prerelease|release|dev|improvement)\/[A-Z]+\-[0-9]+(-.*)?$)|^([A-Z]+\-[0-9]+(-.*)?$)|^(main)$"
-
 
 ### Validation Criteria
 
@@ -85,4 +80,4 @@ All tests should pass if hook running correctly.
 - To add new scenarios, edit test-data/test-branch-names.txt.
 
 For issues or enhancements, reach out to Isabella Fernandes <isa.fernandes2003@gmail.com>.    
-Co-authored-by: Ben Rhine <user@users.noreply.github.com> (**TODO**: change when cloning repo).
+Co-authored-by: Ben Rhine <user@users.noreply.github.com> (**TODO**: change when cloning repo into org).
