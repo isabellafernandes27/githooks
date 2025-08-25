@@ -173,3 +173,8 @@ Available test suites:
 - **test-pre-push-tf** → validates Terraform-validation pre-push check  
 
 Each test folder contains its own **README.md** with detailed setup, scenarios, and validation criteria.  
+
+## **Author**
+
+Maintained and created by: Isabella Fernandes <isa.fernandes2003@gmail.com>.    
+Co-authored by: Ben Rhine <user@users.noreply.github.com> (TODO)
