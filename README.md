@@ -7,7 +7,7 @@ Hooks are available under scripts/hooks. They need to be shared for each teammem
 
 Skip hooks by using either `-n` or `--no-verify` when running `git`.
 
-These scripts were made to run on Bash >=4.0. Installation instructions are available on section **TBD (only pre-push needs to be 4.0)**.
+These scripts were made to run on Bash >=4.0. Installation instructions are available here: [**Installation**](#installation).
 
 ## Table Of Contents
  - [Todos](#todos)
