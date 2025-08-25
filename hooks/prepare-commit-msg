@@ -1,18 +1,18 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Ticket DDDS-17: Pre-pends ticket number/branch name in git message
 
 COMMIT_MSG_FILE="$1"
-COMMIT_SOURCE="$2"
+COMMIT_SOURCE="${TEST_COMMIT_SOURCE:-$2}"   # Use env var in tests, fallback to real arg
 SHA="$3"
 
 # Only act on commit types where a message is expected (not merges or squashes)
-if [[ "$COMMIT_SOURCE" == "merge" || "$COMMIT_SOURCE" == "squash" ]]; then
+if [[ "$COMMIT_SOURCE" == "squash" ]]; then
   exit 0
 fi
 
-# Get current branch name
-BRANCH_NAME="$(git rev-parse --abbrev-ref HEAD)"
+# Get current branch name safely
+BRANCH_NAME=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || echo "")
 
 # Extract Jira ticket number from branch name (DDDS-123 from DDDS-123-add-login)
 if [[ "$BRANCH_NAME" =~ ([A-Z]+-[0-9]+) ]]; then

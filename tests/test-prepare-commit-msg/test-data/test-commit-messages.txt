@@ -1,0 +1,31 @@
+# ----------------------------
+# VALID CASES (ticket should be prepended)
+# ----------------------------
+DDDS-123-add-login|Implement login handler|DDDS-123: Implement login handler
+DDDS-456-refactor-auth|Refactor authentication flow|DDDS-456: Refactor authentication flow
+feature/DDDS-789-ui-module|Add new UI module|DDDS-789: Add new UI module
+bugfix/DDDS-999-crash-fix|Fix crash on startup|DDDS-999: Fix crash on startup
+
+# ----------------------------
+# ALREADY PREFIXED (should NOT prepend again)
+# ----------------------------
+DDDS-321-existing|DDDS-321: Fix bug in service|DDDS-321: Fix bug in service
+feature/DDDS-654-api|DDDS-654: Improve API response time|DDDS-654: Improve API response time
+
+# ----------------------------
+# NO MATCHING TICKET PATTERN (should remain unchanged)
+# ----------------------------
+some-random-branch|Update README with usage instructions|Update README with usage instructions
+hotfix/no-ticket|Patch dependency upgrade|Patch dependency upgrade
+
+# ----------------------------
+# EDGE CASES
+# ----------------------------
+DDDS-111-leading-space|   Initial commit with spaces|DDDS-111:    Initial commit with spaces
+DDDS-222-lowercase|fix typo in docs|DDDS-222: fix typo in docs
+DDDS-333-mixed-case|Refactor Code Style|DDDS-333: Refactor Code Style
+DDDS-444-colon-test|Handle input: validation errors|DDDS-444: Handle input: validation errors
+# Merge commit (should still prepend ticket ID)
+DDDS-555-new-feature|Merge branch 'DDDS-555-new-feature' into main|DDDS-555: Merge branch 'DDDS-555-new-feature' into main
+# Squash commit (should remain unchanged)
+DDDS-222-squash-case|This is a squash commit|This is a squash commit|squash
