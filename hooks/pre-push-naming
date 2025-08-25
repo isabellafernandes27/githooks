@@ -1,6 +1,4 @@
-#!/bin/bash
-
-# Ticket DDDS-20: Deny push if branch does not meet validation criteria
+#!/usr/bin/env bash
 
 # Colors for messages
 RED='\033[0;31m'
@@ -34,11 +32,12 @@ if [[ "$BRANCH_NAME" =~ $VALID_BRANCH_REGEX ]]; then
   exit 0
 else
   echo -e "\n${RED}Pre-commit: Please correct the branch name${NOCOLOR}"
-  printf "\nBranch name not as per the defined rules (e.g.:  "
-  echo -e "${GREEN}feature, hotfix, bugfix, library, prerelease, release, dev, improvement, hotfix-102, XXXX-1234, XXXX-1234-something${NOCOLOR})\n"
-  echo -e "${ORANGE}You cannot push in these branches directly: ${BRANCHES_TO_SKIP[@]}"
-  echo -e "\nCurrent branch name: ${BRANCH_NAME}"
+  echo -e "Branch name not as per the defined rules (e.g.:  "
+  echo -e "   feature, hotfix, bugfix, library, prerelease, "
+  echo -e "   release, dev, improvement, hotfix-102, XXXX-1234, XXXX-1234-something${NOCOLOR})"
+  echo -e "You cannot push in these branches directly: ${ORANGE}${BRANCHES_TO_SKIP[@]}${NOCOLOR}"
+  echo -e "Current branch name: ${ORANGE}${BRANCH_NAME}${NOCOLOR}"
   echo -e "\nTo rename your branch, run:"
-  echo -e "  git branch -m feature/IDDS-1234-short-description"
+  echo -e "  git branch -m feature/IDDS-1234-short-description-example"
   exit 1
 fi

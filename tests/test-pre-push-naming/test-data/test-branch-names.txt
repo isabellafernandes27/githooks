@@ -1,0 +1,46 @@
+# ===============================
+# Criteria 1: Prefixed branch + ticket number allowed
+# Examples: feature/DPDS-1234-login-handler
+# ===============================
+feature/DDDS-1234 0
+hotfix/DDDS-4567-suffix 0
+dev/DDDS-9876 0
+library/DDDS-1111 0
+bugfix/DDDS-2222 0
+release/DDDS-3333 0
+prerelease/DDDS-4444 0
+improvement/DDDS-5555 0
+
+# ===============================
+# Criteria 2: Ticket prefix only (no type) allowed
+# Examples: DPDS-1234-login-handler
+# ===============================
+DDDS-5678-extra 0
+
+# ===============================
+# Criteria 3: Pure ticket number allowed
+# Examples: DPDS-1234
+# ===============================
+DDDS-7890 0
+
+# ===============================
+# Criteria 4: Lowercase prefix denied
+# Examples: dev/ddds-1234, ddds-1234
+# ===============================
+dev/ddds-0001 1
+ddds-5678 1
+
+# ===============================
+# Criteria 5: Non-numeric ticket denied
+# Examples: DPDS-abcd, hotfix/DPDS-ab3c
+# ===============================
+feature/DDDS-abc 1
+hotfix/DDDS-ab3c 1
+
+# ===============================
+# Criteria 6: Protected branches denied
+# Examples: production, master, staging
+# ===============================
+production 1
+master 1
+staging 1

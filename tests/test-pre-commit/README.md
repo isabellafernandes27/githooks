@@ -50,9 +50,11 @@ chmod +x tests/test-pre-commit/test-fmt
 ./tests/test-pre-commit/test-fmt
 ```
 
-All tests should pass if hook running correctly. If you encounter any issues, reach out to Isabella Fernandes <isa.fernandes2003@gmail.com>. (**TODO**: change when cloning repo).
+All tests should pass if hook running correctly. 
 
 ## Notes
 
 - Each test is isolated: the temp repo is reset between tests to avoid cross-contamination.
 - If you add new test scenarios, place their input under `test-data/<scenario-name>/`.
+
+For issues or enhancements, reach out to Isabella Fernandes <isa.fernandes2003@gmail.com>.  
