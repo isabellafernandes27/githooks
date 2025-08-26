@@ -3,7 +3,7 @@ As per Epic [DPDS-11](https://dat.jeppesen.com/jira/browse/DPDS-11), this aims t
 
 Sample Java project with sample Terraform files were built just to mimic initial work. 
 
-Hooks are available under scripts/hooks. They need to be shared for each teammember to put inside their personal .git/hooks directory. It is possible to enforce their usage through Gradle installation (TBD). A testing suite has been provided for the hooks under scripts/tests.
+Hooks are available under /hooks. They need to be shared for each teammember to put inside their personal .git/hooks directory. It is possible to enforce their usage through Gradle installation (TBD). A testing suite has been provided for the hooks under scripts/tests.
 
 Skip hooks by using either `-n` or `--no-verify` when running `git`.
 
