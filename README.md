@@ -34,7 +34,7 @@ These scripts were made to run on Bash >=4.0. Installation instructions are avai
 
 ## Requirements
 
-To run these tests, you’ll need the following:
+To run these hooks and tests, you’ll need the following:
 
 1. **Git**
    - Version: `git ≥ 2.20`
@@ -42,7 +42,7 @@ To run these tests, you’ll need the following:
 
 2. **Bash**
    - Version: `bash ≥ 4.0`
-   - The hook uses regex matching (`=~`) and `BASH_REMATCH`, which are not supported in Bash 3.x.  
+   - The hooks use regex matching (`=~`) and `BASH_REMATCH`, which are not supported in Bash 3.x.  
    - **macOS note**: older macOS ships with Bash 3.2. Install Bash 4+ via [Homebrew](https://brew.sh/):
      ```bash
      brew install bash
